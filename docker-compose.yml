@@ -1,0 +1,103 @@
+# ==============================================================================
+# Corporate WebRTC Telephony System
+# LDAP Auth + FreeSWITCH + React Frontend
+# ==============================================================================
+# Network: 100.64.0.0/24 (CGNAT range, non-routable)
+# IPv6: fd00::/64 (ULA)
+#
+# Quick Start:
+#   1. Configure config/ldap.json with your AD settings
+#   2. Configure config/freeswitch/trunk.xml with FreePBX details
+#   3. Run: ./scripts/generate-ssl.sh
+#   4. docker compose up -d
+#   5. Open https://<host-ip>
+# ==============================================================================
+
+services:
+  # FreeSWITCH Media Server
+  freeswitch:
+    image: freeswitch/freeswitch:latest
+    container_name: freeswitch
+    hostname: freeswitch
+    networks:
+      telephony_net:
+        ipv4_address: 100.64.0.10
+        ipv6_address: fd00::10
+    volumes:
+      - ./config/freeswitch:/usr/local/freeswitch/conf/custom:ro
+      - ./data/freeswitch:/usr/local/freeswitch/db
+      - ./logs/freeswitch:/usr/local/freeswitch/log
+      - ./config/ssl:/etc/freeswitch/tls:ro
+    ports:
+      - "5060:5060/udp"   # SIP
+      - "5061:5061/tcp"   # WSS
+      - "16384-16448:16384-16448/udp" # RTP
+    restart: unless-stopped
+    depends_on:
+      - backend
+
+  # Backend API & LDAP Auth
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: backend
+    hostname: backend
+    networks:
+      telephony_net:
+        ipv4_address: 100.64.0.20
+        ipv6_address: fd00::20
+    volumes:
+      - ./data/users.json:/app/data/users.json
+      - ./config/ldap.json:/app/config/ldap.json:ro
+      - ./logs/backend:/app/logs
+    environment:
+      - NODE_ENV=production
+      - FREESWITCH_HOST=100.64.0.10
+      - FREESWITCH_WSS_PORT=5061
+    restart: unless-stopped
+
+  # Frontend React App
+  frontend:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: frontend
+    hostname: frontend
+    networks:
+      telephony_net:
+        ipv4_address: 100.64.0.30
+        ipv6_address: fd00::30
+    restart: unless-stopped
+
+  # Nginx Reverse Proxy & SSL Termination
+  nginx:
+    image: nginx:alpine
+    container_name: nginx
+    hostname: nginx
+    networks:
+      telephony_net:
+        ipv4_address: 100.64.0.5
+        ipv6_address: fd00::5
+    volumes:
+      - ./config/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./config/ssl:/etc/nginx/ssl:ro
+      - ./client/dist:/usr/share/nginx/html:ro
+    ports:
+      - "80:80"
+      - "443:443"
+    restart: unless-stopped
+    depends_on:
+      - frontend
+      - backend
+
+networks:
+  telephony_net:
+    driver: bridge
+    enable_ipv6: true
+    ipam:
+      config:
+        - subnet: 100.64.0.0/24
+          gateway: 100.64.0.1
+        - subnet: fd00::/64
+          gateway: fd00::1

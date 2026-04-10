@@ -1,0 +1,15 @@
+{
+  "url": "ldap://ad.company.local",
+  "baseDN": "DC=company,DC=local",
+  "bindDN": "CN=TelephonyService,OU=ServiceAccounts,DC=company,DC=local",
+  "bindCredentials": "YourSecurePasswordHere",
+  "searchBase": "OU=Users,DC=company,DC=local",
+  "attributes": {
+    "username": "sAMAccountName",
+    "displayName": "displayName",
+    "department": "department"
+  },
+  "tlsOptions": {
+    "rejectUnauthorized": false
+  }
+}
