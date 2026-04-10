@@ -7,8 +7,8 @@ domain = telephony.local
 
 # External IP addresses (for NAT handling)
 # Set to your server's LAN IP or leave auto
-external_rtp_ip = 100.64.0.10
-external_sip_ip = 100.64.0.10
+external_rtp_ip = 100.64.1.10
+external_sip_ip = 100.64.1.10
 
 # Codec preferences (Opus first, then G.711)
 global_codec_prefs = OPUS,PCMU,PCMA

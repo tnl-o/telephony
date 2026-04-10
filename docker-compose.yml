@@ -2,7 +2,7 @@
 # Corporate WebRTC Telephony System
 # LDAP Auth + FreeSWITCH + React Frontend
 # ==============================================================================
-# Network: 100.64.0.0/24 (CGNAT range, non-routable)
+# Network: 100.64.1.0/24 (CGNAT range, non-routable)
 # IPv6: fd00::/64 (ULA)
 #
 # Quick Start:
@@ -16,18 +16,20 @@
 services:
   # FreeSWITCH Media Server
   freeswitch:
-    image: freeswitch/freeswitch:latest
+    build:
+      context: ./freeswitch
+      dockerfile: Dockerfile
     container_name: freeswitch
     hostname: freeswitch
     networks:
       telephony_net:
-        ipv4_address: 100.64.0.10
+        ipv4_address: 100.64.1.10
         ipv6_address: fd00::10
     volumes:
       - ./config/freeswitch:/usr/local/freeswitch/conf/custom:ro
       - ./data/freeswitch:/usr/local/freeswitch/db
       - ./logs/freeswitch:/usr/local/freeswitch/log
-      - ./config/ssl:/etc/freeswitch/tls:ro
+      - freeswitch_directory:/etc/freeswitch/directory/default
     ports:
       - "5060:5060/udp"   # SIP
       - "5061:5061/tcp"   # WSS
@@ -45,28 +47,35 @@ services:
     hostname: backend
     networks:
       telephony_net:
-        ipv4_address: 100.64.0.20
+        ipv4_address: 100.64.1.20
         ipv6_address: fd00::20
     volumes:
       - ./data/users.json:/app/data/users.json
       - ./config/ldap.json:/app/config/ldap.json:ro
       - ./logs/backend:/app/logs
+      - freeswitch_directory:/etc/freeswitch/directory/default
     environment:
       - NODE_ENV=production
-      - FREESWITCH_HOST=100.64.0.10
+      - AUTH_MODE=simple
+      - DEV_USERS=demo:demo123,test:test123
+      - DEV_SIP_PASSWORD=dev_sip_pass_2024
+      - FREESWITCH_HOST=100.64.1.10
       - FREESWITCH_WSS_PORT=5061
+      - FREESWITCH_DIR_PATH=/etc/freeswitch/directory/default
+      - FREESWITCH_ESL_PORT=8021
+      - FREESWITCH_ESL_PASSWORD=ClueCon
     restart: unless-stopped
 
   # Frontend React App
   frontend:
     build:
-      context: ./client
+      context: ./frontend
       dockerfile: Dockerfile
     container_name: frontend
     hostname: frontend
     networks:
       telephony_net:
-        ipv4_address: 100.64.0.30
+        ipv4_address: 100.64.1.30
         ipv6_address: fd00::30
     restart: unless-stopped
 
@@ -77,12 +86,12 @@ services:
     hostname: nginx
     networks:
       telephony_net:
-        ipv4_address: 100.64.0.5
+        ipv4_address: 100.64.1.5
         ipv6_address: fd00::5
     volumes:
       - ./config/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./config/ssl:/etc/nginx/ssl:ro
-      - ./client/dist:/usr/share/nginx/html:ro
+      - ./frontend/dist:/usr/share/nginx/html:ro
     ports:
       - "80:80"
       - "443:443"
@@ -97,7 +106,11 @@ networks:
     enable_ipv6: true
     ipam:
       config:
-        - subnet: 100.64.0.0/24
-          gateway: 100.64.0.1
+        - subnet: 100.64.1.0/24
+          gateway: 100.64.1.1
         - subnet: fd00::/64
           gateway: fd00::1
+
+volumes:
+  freeswitch_directory:
+    driver: local

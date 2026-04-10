@@ -14,8 +14,8 @@ function App() {
   const checkAuth = async () => {
     try {
       const currentUser = await authAPI.getCurrentUser();
-      if (currentUser) {
-        setUser(currentUser);
+      if (currentUser?.user) {
+        setUser(currentUser.user);
       }
     } catch (error) {
       console.error('Auth check failed:', error);
@@ -34,8 +34,10 @@ function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900">
-        <div className="text-white text-xl">Loading...</div>
+      <div className="app-loading">
+        <div className="bg-orb orb-1" />
+        <div className="bg-orb orb-2" />
+        <div className="spinner" />
       </div>
     );
   }

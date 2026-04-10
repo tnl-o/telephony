@@ -23,9 +23,20 @@
   <profiles>
     <!-- Internal Profile: WebRTC Clients (WSS, Opus) -->
     <X-PRE-PROCESS cmd="include" data="sip_profiles/internal.xml"/>
-    
+
     <!-- External Profile: Trunk to FreePBX (UDP/TCP, G.711) -->
     <X-PRE-PROCESS cmd="include" data="sip_profiles/external.xml"/>
+  </profiles>
+</configuration>
+
+<configuration name="directory.conf" description="Phone Directory">
+  <settings>
+    <param name="dir-provider" value="ldap"/>
+  </settings>
+  <profiles>
+    <profile name="default">
+      <param name="dir-provider" value="xml"/>
+    </profile>
   </profiles>
 </configuration>
 
@@ -33,14 +44,14 @@
   <network-lists>
     <!-- Local Network: Docker CGNAT Range -->
     <list name="lan" default="allow">
-      <node network="100.64.0.0/10" action="allow"/>
+      <node network="100.64.1.0/24" action="allow"/>
       <node network="127.0.0.0/8" action="allow"/>
       <node network="::1" action="allow"/>
     </list>
-    
+
     <!-- NAT Handling for RFC1918 + CGNAT -->
     <list name="nat.auto_rfc1918" default="allow">
-      <node network="100.64.0.0/10" action="allow"/>
+      <node network="100.64.1.0/24" action="allow"/>
       <node network="10.0.0.0/8" action="allow"/>
       <node network="172.16.0.0/12" action="allow"/>
       <node network="192.168.0.0/16" action="allow"/>
@@ -72,7 +83,7 @@
 <configuration name="event_socket.conf" description="Event Socket">
   <settings>
     <param name="nat-map" value="false"/>
-    <param name="listen-ip" value="100.64.0.10"/>
+    <param name="listen-ip" value="100.64.1.10"/>
     <param name="listen-port" value="8021"/>
     <param name="apply-inbound-acl" value="lan"/>
     <param name="stop-on-bind-error" value="true"/>

@@ -1,0 +1,416 @@
+<?xml version="1.0" encoding="utf-8"?>
+<include>
+  <domain name="100.64.0.10">
+    <!-- Без dial-string bridge user/… даёт «No dial-string available» — B-leg не создаётся, входящего нет. -->
+    <params>
+      <!-- Явно internal + без presence_id/sip_invite_domain из vanilla — иначе INVITE к JsSIP за nginx часто не доходит как входящий звонок. -->
+      <param name="dial-string" value="{ignore_early_media=true}${sofia_contact(internal/${dialed_user}@${dialed_domain})}"/>
+    </params>
+    <groups>
+      <group name="default">
+        <users>
+          <user id="1000">
+            <params>
+              <param name="password" value="devsip"/>
+            </params>
+            <variables>
+              <variable name="user_context" value="default"/>
+              <variable name="effective_caller_id_number" value="1000"/>
+              <variable name="effective_caller_id_name" value="Ext 1000"/>
+            </variables>
+          </user>
+          <user id="1001">
+            <params>
+              <param name="password" value="devsip"/>
+            </params>
+            <variables>
+              <variable name="user_context" value="default"/>
+              <variable name="effective_caller_id_number" value="1001"/>
+              <variable name="effective_caller_id_name" value="Ext 1001"/>
+            </variables>
+          </user>
+          <user id="1002">
+            <params>
+              <param name="password" value="devsip"/>
+            </params>
+            <variables>
+              <variable name="user_context" value="default"/>
+              <variable name="effective_caller_id_number" value="1002"/>
+              <variable name="effective_caller_id_name" value="Ext 1002"/>
+            </variables>
+          </user>
+          <user id="1003">
+            <params>
+              <param name="password" value="devsip"/>
+            </params>
+            <variables>
+              <variable name="user_context" value="default"/>
+              <variable name="effective_caller_id_number" value="1003"/>
+              <variable name="effective_caller_id_name" value="Ext 1003"/>
+            </variables>
+          </user>
+          <user id="1004">
+            <params>
+              <param name="password" value="devsip"/>
+            </params>
+            <variables>
+              <variable name="user_context" value="default"/>
+              <variable name="effective_caller_id_number" value="1004"/>
+              <variable name="effective_caller_id_name" value="Ext 1004"/>
+            </variables>
+          </user>
+          <user id="1005">
+            <params>
+              <param name="password" value="devsip"/>
+            </params>
+            <variables>
+              <variable name="user_context" value="default"/>
+              <variable name="effective_caller_id_number" value="1005"/>
+              <variable name="effective_caller_id_name" value="Ext 1005"/>
+            </variables>
+          </user>
+          <user id="1006">
+            <params>
+              <param name="password" value="devsip"/>
+            </params>
+            <variables>
+              <variable name="user_context" value="default"/>
+              <variable name="effective_caller_id_number" value="1006"/>
+              <variable name="effective_caller_id_name" value="Ext 1006"/>
+            </variables>
+          </user>
+          <user id="1007">
+            <params>
+              <param name="password" value="devsip"/>
+            </params>
+            <variables>
+              <variable name="user_context" value="default"/>
+              <variable name="effective_caller_id_number" value="1007"/>
+              <variable name="effective_caller_id_name" value="Ext 1007"/>
+            </variables>
+          </user>
+          <user id="1008">
+            <params>
+              <param name="password" value="devsip"/>
+            </params>
+            <variables>
+              <variable name="user_context" value="default"/>
+              <variable name="effective_caller_id_number" value="1008"/>
+              <variable name="effective_caller_id_name" value="Ext 1008"/>
+            </variables>
+          </user>
+          <user id="1009">
+            <params>
+              <param name="password" value="devsip"/>
+            </params>
+            <variables>
+              <variable name="user_context" value="default"/>
+              <variable name="effective_caller_id_number" value="1009"/>
+              <variable name="effective_caller_id_name" value="Ext 1009"/>
+            </variables>
+          </user>
+          <user id="1010">
+            <params>
+              <param name="password" value="devsip"/>
+            </params>
+            <variables>
+              <variable name="user_context" value="default"/>
+              <variable name="effective_caller_id_number" value="1010"/>
+              <variable name="effective_caller_id_name" value="Ext 1010"/>
+            </variables>
+          </user>
+          <user id="1011">
+            <params>
+              <param name="password" value="devsip"/>
+            </params>
+            <variables>
+              <variable name="user_context" value="default"/>
+              <variable name="effective_caller_id_number" value="1011"/>
+              <variable name="effective_caller_id_name" value="Ext 1011"/>
+            </variables>
+          </user>
+          <user id="1012">
+            <params>
+              <param name="password" value="devsip"/>
+            </params>
+            <variables>
+              <variable name="user_context" value="default"/>
+              <variable name="effective_caller_id_number" value="1012"/>
+              <variable name="effective_caller_id_name" value="Ext 1012"/>
+            </variables>
+          </user>
+          <user id="1013">
+            <params>
+              <param name="password" value="devsip"/>
+            </params>
+            <variables>
+              <variable name="user_context" value="default"/>
+              <variable name="effective_caller_id_number" value="1013"/>
+              <variable name="effective_caller_id_name" value="Ext 1013"/>
+            </variables>
+          </user>
+          <user id="1014">
+            <params>
+              <param name="password" value="devsip"/>
+            </params>
+            <variables>
+              <variable name="user_context" value="default"/>
+              <variable name="effective_caller_id_number" value="1014"/>
+              <variable name="effective_caller_id_name" value="Ext 1014"/>
+            </variables>
+          </user>
+          <user id="1015">
+            <params>
+              <param name="password" value="devsip"/>
+            </params>
+            <variables>
+              <variable name="user_context" value="default"/>
+              <variable name="effective_caller_id_number" value="1015"/>
+              <variable name="effective_caller_id_name" value="Ext 1015"/>
+            </variables>
+          </user>
+          <user id="1016">
+            <params>
+              <param name="password" value="devsip"/>
+            </params>
+            <variables>
+              <variable name="user_context" value="default"/>
+              <variable name="effective_caller_id_number" value="1016"/>
+              <variable name="effective_caller_id_name" value="Ext 1016"/>
+            </variables>
+          </user>
+          <user id="1017">
+            <params>
+              <param name="password" value="devsip"/>
+            </params>
+            <variables>
+              <variable name="user_context" value="default"/>
+              <variable name="effective_caller_id_number" value="1017"/>
+              <variable name="effective_caller_id_name" value="Ext 1017"/>
+            </variables>
+          </user>
+          <user id="1018">
+            <params>
+              <param name="password" value="devsip"/>
+            </params>
+            <variables>
+              <variable name="user_context" value="default"/>
+              <variable name="effective_caller_id_number" value="1018"/>
+              <variable name="effective_caller_id_name" value="Ext 1018"/>
+            </variables>
+          </user>
+          <user id="1019">
+            <params>
+              <param name="password" value="devsip"/>
+            </params>
+            <variables>
+              <variable name="user_context" value="default"/>
+              <variable name="effective_caller_id_number" value="1019"/>
+              <variable name="effective_caller_id_name" value="Ext 1019"/>
+            </variables>
+          </user>
+          <user id="1020">
+            <params>
+              <param name="password" value="devsip"/>
+            </params>
+            <variables>
+              <variable name="user_context" value="default"/>
+              <variable name="effective_caller_id_number" value="1020"/>
+              <variable name="effective_caller_id_name" value="Ext 1020"/>
+            </variables>
+          </user>
+          <user id="1021">
+            <params>
+              <param name="password" value="devsip"/>
+            </params>
+            <variables>
+              <variable name="user_context" value="default"/>
+              <variable name="effective_caller_id_number" value="1021"/>
+              <variable name="effective_caller_id_name" value="Ext 1021"/>
+            </variables>
+          </user>
+          <user id="1022">
+            <params>
+              <param name="password" value="devsip"/>
+            </params>
+            <variables>
+              <variable name="user_context" value="default"/>
+              <variable name="effective_caller_id_number" value="1022"/>
+              <variable name="effective_caller_id_name" value="Ext 1022"/>
+            </variables>
+          </user>
+          <user id="1023">
+            <params>
+              <param name="password" value="devsip"/>
+            </params>
+            <variables>
+              <variable name="user_context" value="default"/>
+              <variable name="effective_caller_id_number" value="1023"/>
+              <variable name="effective_caller_id_name" value="Ext 1023"/>
+            </variables>
+          </user>
+          <user id="1024">
+            <params>
+              <param name="password" value="devsip"/>
+            </params>
+            <variables>
+              <variable name="user_context" value="default"/>
+              <variable name="effective_caller_id_number" value="1024"/>
+              <variable name="effective_caller_id_name" value="Ext 1024"/>
+            </variables>
+          </user>
+          <user id="1025">
+            <params>
+              <param name="password" value="devsip"/>
+            </params>
+            <variables>
+              <variable name="user_context" value="default"/>
+              <variable name="effective_caller_id_number" value="1025"/>
+              <variable name="effective_caller_id_name" value="Ext 1025"/>
+            </variables>
+          </user>
+          <user id="1026">
+            <params>
+              <param name="password" value="devsip"/>
+            </params>
+            <variables>
+              <variable name="user_context" value="default"/>
+              <variable name="effective_caller_id_number" value="1026"/>
+              <variable name="effective_caller_id_name" value="Ext 1026"/>
+            </variables>
+          </user>
+          <user id="1027">
+            <params>
+              <param name="password" value="devsip"/>
+            </params>
+            <variables>
+              <variable name="user_context" value="default"/>
+              <variable name="effective_caller_id_number" value="1027"/>
+              <variable name="effective_caller_id_name" value="Ext 1027"/>
+            </variables>
+          </user>
+          <user id="1028">
+            <params>
+              <param name="password" value="devsip"/>
+            </params>
+            <variables>
+              <variable name="user_context" value="default"/>
+              <variable name="effective_caller_id_number" value="1028"/>
+              <variable name="effective_caller_id_name" value="Ext 1028"/>
+            </variables>
+          </user>
+          <user id="1029">
+            <params>
+              <param name="password" value="devsip"/>
+            </params>
+            <variables>
+              <variable name="user_context" value="default"/>
+              <variable name="effective_caller_id_number" value="1029"/>
+              <variable name="effective_caller_id_name" value="Ext 1029"/>
+            </variables>
+          </user>
+          <user id="1030">
+            <params>
+              <param name="password" value="devsip"/>
+            </params>
+            <variables>
+              <variable name="user_context" value="default"/>
+              <variable name="effective_caller_id_number" value="1030"/>
+              <variable name="effective_caller_id_name" value="Ext 1030"/>
+            </variables>
+          </user>
+          <user id="1031">
+            <params>
+              <param name="password" value="devsip"/>
+            </params>
+            <variables>
+              <variable name="user_context" value="default"/>
+              <variable name="effective_caller_id_number" value="1031"/>
+              <variable name="effective_caller_id_name" value="Ext 1031"/>
+            </variables>
+          </user>
+          <user id="1032">
+            <params>
+              <param name="password" value="devsip"/>
+            </params>
+            <variables>
+              <variable name="user_context" value="default"/>
+              <variable name="effective_caller_id_number" value="1032"/>
+              <variable name="effective_caller_id_name" value="Ext 1032"/>
+            </variables>
+          </user>
+          <user id="1033">
+            <params>
+              <param name="password" value="devsip"/>
+            </params>
+            <variables>
+              <variable name="user_context" value="default"/>
+              <variable name="effective_caller_id_number" value="1033"/>
+              <variable name="effective_caller_id_name" value="Ext 1033"/>
+            </variables>
+          </user>
+          <user id="1034">
+            <params>
+              <param name="password" value="devsip"/>
+            </params>
+            <variables>
+              <variable name="user_context" value="default"/>
+              <variable name="effective_caller_id_number" value="1034"/>
+              <variable name="effective_caller_id_name" value="Ext 1034"/>
+            </variables>
+          </user>
+          <user id="1035">
+            <params>
+              <param name="password" value="devsip"/>
+            </params>
+            <variables>
+              <variable name="user_context" value="default"/>
+              <variable name="effective_caller_id_number" value="1035"/>
+              <variable name="effective_caller_id_name" value="Ext 1035"/>
+            </variables>
+          </user>
+          <user id="1036">
+            <params>
+              <param name="password" value="devsip"/>
+            </params>
+            <variables>
+              <variable name="user_context" value="default"/>
+              <variable name="effective_caller_id_number" value="1036"/>
+              <variable name="effective_caller_id_name" value="Ext 1036"/>
+            </variables>
+          </user>
+          <user id="1037">
+            <params>
+              <param name="password" value="devsip"/>
+            </params>
+            <variables>
+              <variable name="user_context" value="default"/>
+              <variable name="effective_caller_id_number" value="1037"/>
+              <variable name="effective_caller_id_name" value="Ext 1037"/>
+            </variables>
+          </user>
+          <user id="1038">
+            <params>
+              <param name="password" value="devsip"/>
+            </params>
+            <variables>
+              <variable name="user_context" value="default"/>
+              <variable name="effective_caller_id_number" value="1038"/>
+              <variable name="effective_caller_id_name" value="Ext 1038"/>
+            </variables>
+          </user>
+          <user id="1039">
+            <params>
+              <param name="password" value="devsip"/>
+            </params>
+            <variables>
+              <variable name="user_context" value="default"/>
+              <variable name="effective_caller_id_number" value="1039"/>
+              <variable name="effective_caller_id_name" value="Ext 1039"/>
+            </variables>
+          </user>
+        </users>
+      </group>
+    </groups>
+  </domain>
+</include>

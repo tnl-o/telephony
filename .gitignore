@@ -1,0 +1,4 @@
+frontend/dist/
+config/ssl/*.pem
+node_modules/
+**/node_modules/

@@ -7,8 +7,8 @@
     <param name="auth-calls" value="false"/>
     <param name="debug" value="0"/>
     <param name="sip-port" value="5061"/>
-    <param name="rtp-ip" value="100.64.0.10"/>
-    <param name="sip-ip" value="100.64.0.10"/>
+    <param name="rtp-ip" value="100.64.1.10"/>
+    <param name="sip-ip" value="100.64.1.10"/>
     
     <!-- NAT Handling -->
     <param name="ext-rtp-ip" value="$${external_rtp_ip}"/>

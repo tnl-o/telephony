@@ -2,10 +2,15 @@ const express = require('express');
 const cors = require('cors');
 const WebSocket = require('ws');
 const http = require('http');
+const net = require('net');
 require('dotenv').config();
 
 const LDAPService = require('./ldap');
 const UserService = require('./userService');
+const { buildSimpleAuth } = require('./simpleAuth');
+
+const authMode = (process.env.AUTH_MODE || 'ldap').toLowerCase();
+const simpleAuth = authMode === 'simple' ? buildSimpleAuth() : null;
 
 // Configuration
 const config = {
@@ -20,7 +25,13 @@ const config = {
     emailAttribute: process.env.LDAP_EMAIL_ATTRIBUTE || 'mail',
     departmentAttribute: process.env.LDAP_DEPARTMENT_ATTRIBUTE || 'department'
   },
-  usersDbPath: process.env.USERS_DB_PATH || '/app/data/users.json'
+  usersDbPath: process.env.USERS_DB_PATH || '/app/data/users.json',
+  freeswitchDirPath: process.env.FREESWITCH_DIR_PATH || '/etc/freeswitch/directory/default',
+  freeswitchEsl: {
+    host: process.env.FREESWITCH_HOST || '100.64.0.10',
+    port: parseInt(process.env.FREESWITCH_ESL_PORT || '8021', 10),
+    password: process.env.FREESWITCH_ESL_PASSWORD || 'ClueCon'
+  }
 };
 
 // Initialize services
@@ -56,6 +67,38 @@ wss.on('connection', (ws) => {
   });
 });
 
+/**
+ * Build the SIP WebSocket URL for the client.
+ * Prefers SIP_WSS_URL env var (set in .env for dev).
+ * Falls back to constructing from request headers:
+ *   wss://<public-host>/sip  (nginx proxies /sip → freeswitch:5080)
+ */
+function buildSipWssUrl(req) {
+  if (process.env.SIP_WSS_URL) return process.env.SIP_WSS_URL;
+
+  // X-Forwarded-Host is now set to $http_host by nginx (includes port)
+  const fwdHost = req.get('x-forwarded-host');
+  if (fwdHost) return `wss://${fwdHost}/sip`;
+
+  const host = req.get('host');
+  if (host) return `wss://${host}/sip`;
+
+  const fallbackHost = process.env.WSS_PUBLIC_HOST || process.env.PUBLIC_HOST || 'localhost';
+  return `wss://${fallbackHost}/sip`;
+}
+
+function publicHostFromRequest(req) {
+  const forwarded = req.get('x-forwarded-host');
+  if (forwarded) {
+    return forwarded.split(':')[0].trim();
+  }
+  const host = req.get('host');
+  if (host) {
+    return host.split(':')[0].trim();
+  }
+  return process.env.WSS_PUBLIC_HOST || process.env.PUBLIC_HOST || 'localhost';
+}
+
 // Broadcast status update to all connected clients
 function broadcastStatusUpdate(userData) {
   const message = JSON.stringify({
@@ -70,11 +113,75 @@ function broadcastStatusUpdate(userData) {
   });
 }
 
+/**
+ * Send 'reloadxml' to FreeSWITCH via ESL so it picks up new directory users.
+ * Retries with backoff if FS is not ready yet.
+ */
+async function reloadFreeSwitchXml(maxRetries = 10) {
+  const { host, port, password } = config.freeswitchEsl;
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      await new Promise((resolve, reject) => {
+        const socket = net.createConnection({ host, port });
+        const timeout = setTimeout(() => reject(new Error('ESL connect timeout')), 3000);
+
+        socket.on('connect', () => {
+          clearTimeout(timeout);
+          socket.write(`auth ${password}\n\n`);
+        });
+
+        let buffer = '';
+        socket.on('data', (chunk) => {
+          buffer += chunk.toString();
+          if (buffer.includes('\n\n') || buffer.includes('Content-Type')) {
+            socket.write('api reloadxml\n\n');
+          }
+          if (buffer.includes('+OK') || (buffer.includes('Content-Length') && buffer.includes('\r\n\r\n'))) {
+            socket.end();
+            resolve();
+          }
+        });
+
+        socket.on('error', reject);
+      });
+
+      console.log('FreeSWITCH reloadxml sent OK');
+      return; // success
+    } catch (err) {
+      if (attempt < maxRetries) {
+        const delay = Math.min(1000 * attempt, 5000);
+        console.log(`FreeSWITCH ESL reloadxml retry ${attempt}/${maxRetries} (${err.message}) — waiting ${delay}ms`);
+        await new Promise(r => setTimeout(r, delay));
+      } else {
+        console.error(`FreeSWITCH ESL reloadxml failed after ${maxRetries} attempts: ${err.message}`);
+      }
+    }
+  }
+}
+
 // Middleware to load users DB on startup
 async function initialize() {
   try {
     await userService.load();
-    await ldapService.connect();
+    // Generate FreeSWITCH directory XML from current users
+    await userService.generateFreeSwitchDirectory(config.freeswitchDirPath);
+    // Tell FreeSWITCH to reload directory
+    await reloadFreeSwitchXml();
+    if (authMode === 'simple') {
+      if (!simpleAuth.map.size) {
+        console.error('AUTH_MODE=simple requires DEV_USERS (e.g. demo:demo,alice:alice123)');
+        process.exit(1);
+      }
+      if (!process.env.DEV_SIP_PASSWORD) {
+        console.error('AUTH_MODE=simple requires DEV_SIP_PASSWORD matching FreeSWITCH dev directory');
+        process.exit(1);
+      }
+      console.log('Auth: simple (DEV_USERS), LDAP skipped');
+    } else {
+      await ldapService.connect();
+      console.log('Auth: LDAP');
+    }
     console.log('Backend initialized successfully');
   } catch (err) {
     console.error('Failed to initialize backend:', err);
@@ -102,8 +209,10 @@ app.post('/api/auth/login', async (req, res) => {
       return res.status(400).json({ error: 'Username and password are required' });
     }
 
-    // Authenticate with LDAP
-    const ldapUser = await ldapService.authenticate(username, password);
+    const ldapUser =
+      authMode === 'simple'
+        ? await simpleAuth.authenticate(username, password)
+        : await ldapService.authenticate(username, password);
 
     // Check if user exists in our database
     let user = userService.findByUsername(ldapUser.username);
@@ -111,6 +220,9 @@ app.post('/api/auth/login', async (req, res) => {
     if (!user) {
       // Create new user with auto-assigned extension
       user = await userService.createUser(ldapUser);
+      // Regenerate FreeSWITCH directory and tell FS to reload
+      await userService.generateFreeSwitchDirectory(config.freeswitchDirPath);
+      await reloadFreeSwitchXml();
     } else {
       // Update user info from LDAP
       user = await userService.updateUserInfo(ldapUser.username, ldapUser);
@@ -144,7 +256,7 @@ app.post('/api/auth/login', async (req, res) => {
       sipCredentials: {
         extension: user.extension.toString(),
         password: user.sipPassword,
-        wssUrl: `wss://${process.env.HOSTNAME || 'localhost'}:7443`
+        wssUrl: buildSipWssUrl(req)
       }
     });
 
@@ -306,10 +418,17 @@ process.on('SIGTERM', async () => {
 
   server.close(() => {
     console.log('HTTP server closed');
-    ldapService.disconnect().then(() => {
-      console.log('LDAP disconnected');
-      process.exit(0);
-    });
+    const done = () => {
+      if (authMode !== 'simple') {
+        ldapService.disconnect().then(() => {
+          console.log('LDAP disconnected');
+          process.exit(0);
+        });
+      } else {
+        process.exit(0);
+      }
+    };
+    done();
   });
 });
 

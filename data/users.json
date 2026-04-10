@@ -1,1 +1,28 @@
-{}
+[
+  {
+    "id": "demo",
+    "username": "demo",
+    "displayName": "Demo",
+    "email": "demo@dev.local",
+    "department": "Dev",
+    "extension": 1000,
+    "sipPassword": "dev_sip_pass_2024",
+    "createdAt": "2026-04-10T23:20:27.732Z",
+    "updatedAt": "2026-04-10T23:44:23.201Z",
+    "online": true,
+    "lastSeen": "2026-04-10T23:44:23.202Z"
+  },
+  {
+    "id": "test",
+    "username": "test",
+    "displayName": "Test",
+    "email": "test@dev.local",
+    "department": "Dev",
+    "extension": 1001,
+    "sipPassword": "dev_sip_pass_2024",
+    "createdAt": "2026-04-10T23:21:00.671Z",
+    "updatedAt": "2026-04-10T23:44:31.566Z",
+    "online": true,
+    "lastSeen": "2026-04-10T23:44:31.568Z"
+  }
+]

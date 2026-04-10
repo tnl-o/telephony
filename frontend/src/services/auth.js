@@ -5,30 +5,40 @@ const API_BASE = '/api';
 export const authAPI = {
   login: async (username, password) => {
     const response = await axios.post(`${API_BASE}/auth/login`, { username, password });
-    if (response.data.token) {
-      localStorage.setItem('token', response.data.token);
-      localStorage.setItem('user', JSON.stringify(response.data.user));
+    if (response.data.user) {
+      const sc = response.data.sipCredentials;
+      localStorage.setItem(
+        'user',
+        JSON.stringify({
+          ...response.data.user,
+          sipPassword: sc?.password,
+          wssUrl: sc?.wssUrl
+        })
+      );
     }
     return response.data;
   },
 
   logout: async () => {
-    await axios.post(`${API_BASE}/auth/logout`);
-    localStorage.removeItem('token');
+    const raw = localStorage.getItem('user');
+    const user = raw ? JSON.parse(raw) : null;
+    if (user?.username) {
+      try {
+        await axios.post(`${API_BASE}/auth/logout`, { username: user.username });
+      } catch (_) {
+        /* ignore network errors on logout */
+      }
+    }
     localStorage.removeItem('user');
   },
 
   getCurrentUser: async () => {
-    const token = localStorage.getItem('token');
-    if (!token) return null;
-    
+    const raw = localStorage.getItem('user');
+    if (!raw) return null;
     try {
-      const response = await axios.get(`${API_BASE}/user/me`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      return response.data;
-    } catch (error) {
-      localStorage.removeItem('token');
+      const user = JSON.parse(raw);
+      return { user };
+    } catch {
       localStorage.removeItem('user');
       return null;
     }
@@ -37,30 +47,21 @@ export const authAPI = {
 
 export const contactsAPI = {
   getAll: async () => {
-    const token = localStorage.getItem('token');
-    const response = await axios.get(`${API_BASE}/contacts`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
+    const response = await axios.get(`${API_BASE}/contacts`);
     return response.data;
   }
 };
 
 export const adminAPI = {
   updateExtension: async (username, extension) => {
-    const token = localStorage.getItem('token');
-    const response = await axios.post(
-      `${API_BASE}/admin/user/${username}/extension`,
-      { extension },
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
+    const response = await axios.post(`${API_BASE}/admin/user/${username}/extension`, {
+      extension
+    });
     return response.data;
   },
 
   getStats: async () => {
-    const token = localStorage.getItem('token');
-    const response = await axios.get(`${API_BASE}/stats`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
+    const response = await axios.get(`${API_BASE}/stats`);
     return response.data;
   }
 };

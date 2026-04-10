@@ -6,8 +6,8 @@ export function useWebSocket() {
 
   useEffect(() => {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.hostname}/ws/status`;
-    
+    const wsUrl = `${protocol}//${window.location.host}/ws/status`;
+
     const ws = new WebSocket(wsUrl);
 
     ws.onopen = () => {
@@ -31,8 +31,13 @@ export function useWebSocket() {
     ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        if (data.type === 'status_update') {
-          setOnlineUsers(new Set(data.onlineUsers));
+        if (data.type === 'status_update' && data.user?.username != null) {
+          setOnlineUsers((prev) => {
+            const next = new Set(prev);
+            if (data.user.online) next.add(data.user.username);
+            else next.delete(data.user.username);
+            return next;
+          });
         }
       } catch (e) {
         console.error('Failed to parse WebSocket message:', e);

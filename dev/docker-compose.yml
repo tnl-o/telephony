@@ -1,0 +1,90 @@
+# Локальная среда: простой логин (без AD) + FreeSWITCH + UI.
+# Запуск из каталога dev/: см. README.md
+
+services:
+  freeswitch:
+    build:
+      context: ../freeswitch
+      dockerfile: Dockerfile
+    container_name: dev-freeswitch
+    hostname: freeswitch
+    environment:
+      PUBLIC_HOST: ${PUBLIC_HOST:-}
+    entrypoint: ["/bin/sh", "/init-public-host.sh"]
+    networks:
+      telephony_dev:
+        ipv4_address: 100.64.0.10
+    volumes:
+      - ./freeswitch/init-public-host.sh:/init-public-host.sh:ro
+      - ./freeswitch/directory/default.xml:/etc/freeswitch/directory/default.xml:ro
+      - ./freeswitch/directory/local-extensions.xml:/etc/freeswitch/directory/local-extensions.xml:ro
+    ports:
+      - "7443:7443/tcp"
+      - "5060:5060/udp"
+      - "5060:5060/tcp"
+      - "16384-16448:16384-16448/udp"
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    container_name: dev-backend
+    hostname: backend
+    env_file:
+      - .env
+    networks:
+      telephony_dev:
+        ipv4_address: 100.64.0.20
+    volumes:
+      - ./data/users.json:/app/data/users.json
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    container_name: dev-frontend
+    hostname: frontend
+    networks:
+      telephony_dev:
+        ipv4_address: 100.64.0.30
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:alpine
+    container_name: dev-nginx
+    hostname: nginx
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -e
+        if [ ! -s /etc/nginx/ssl/cert.pem ]; then
+          apk add --no-cache openssl
+          openssl req -x509 -nodes -days 825 -newkey rsa:2048 \
+            -keyout /etc/nginx/ssl/key.pem \
+            -out /etc/nginx/ssl/cert.pem \
+            -subj "/CN=telephony-dev" \
+            -addext "subjectAltName=DNS:localhost,DNS:host.docker.internal,IP:127.0.0.1"
+        fi
+        exec nginx -g "daemon off;"
+    networks:
+      telephony_dev:
+        ipv4_address: 100.64.0.5
+    ports:
+      - "8443:443/tcp"
+    volumes:
+      - ./nginx/dev.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./ssl:/etc/nginx/ssl
+    depends_on:
+      - frontend
+      - backend
+    restart: unless-stopped
+
+networks:
+  telephony_dev:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 100.64.0.0/24
+          gateway: 100.64.0.1
