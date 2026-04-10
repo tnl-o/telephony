@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Dialplan: Internal and External Routing -->
+
+<include>
+  <!-- Internal Calls: Extension to Extension (1000-5999) -->
+  <extension name="internal_call">
+    <condition field="destination_number" expression="^(1[0-5][0-9]{2}|[2-5][0-9]{3})$">
+      <action application="answer"/>
+      <action application="bridge" value="sofia/profile/internal/$${destination_number}@${domain_name}"/>
+    </condition>
+  </extension>
+
+  <!-- External Calls: Prefix 9 + Number (via FreePBX Trunk) -->
+  <extension name="external_call">
+    <condition field="destination_number" expression="^9(.+)$">
+      <action application="set" value="effective_caller_id_number=${caller_id_number}"/>
+      <action application="set" value="effective_caller_id_name=${caller_id_name}"/>
+      <action application="bridge" value="sofia/gateway/freepbx_trunk/$1"/>
+    </condition>
+  </extension>
+
+  <!-- Emergency Numbers (Direct to Trunk without prefix) -->
+  <extension name="emergency_call">
+    <condition field="destination_number" expression="^(101|102|103|112)$">
+      <action application="answer"/>
+      <action application="bridge" value="sofia/gateway/freepbx_trunk/${destination_number}"/>
+    </condition>
+  </extension>
+
+  <!-- Invalid Number Handling -->
+  <extension name="invalid_number">
+    <condition field="destination_number" expression="^.+$">
+      <action application="answer"/>
+      <action application="playback" value="tone_stream://%(200,0,500);%(200,0,700)"/>
+      <action application="hangup"/>
+    </condition>
+  </extension>
+</include>

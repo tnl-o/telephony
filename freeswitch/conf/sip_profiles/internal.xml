@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Internal SIP Profile: WebRTC Clients -->
+<!-- WSS + Opus Codec for Browser Clients -->
+
+<profile name="internal">
+  <!-- IP Binding: Docker CGNAT Address -->
+  <settings>
+    <param name="auth-calls" value="true"/>
+    <param name="debug" value="0"/>
+    <param name="sip-port" value="5060"/>
+    <param name="ws-port" value="7443"/>
+    <param name="wss-port" value="7443"/>
+    <param name="tls" value="true"/>
+    <param name="tls-bind-params" value="transport=wss"/>
+    <param name="tls-cert-dir" value="/etc/freeswitch/tls"/>
+    <param name="apply-inbound-acl" value="lan"/>
+    <param name="apply-register-acl" value="lan"/>
+    <param name="apply-nat-acl" value="nat.auto_rfc1918"/>
+    
+    <!-- NAT Handling -->
+    <param name="ext-rtp-ip" value="$${external_rtp_ip}"/>
+    <param name="ext-sip-ip" value="$${external_sip_ip}"/>
+    <param name="rtp-ip" value="100.64.0.10"/>
+    <param name="sip-ip" value="100.64.0.10"/>
+    
+    <!-- Codecs: Opus First, then G.711 fallback -->
+    <param name="inbound-codec-prefs" value="$${global_codec_prefs}"/>
+    <param name="outbound-codec-prefs" value="$${global_codec_prefs}"/>
+    
+    <!-- Timers and Sessions -->
+    <param name="max-authentications" value="1000"/>
+    <param name="max-registrations" value="5000"/>
+    <param name="delete-subs-on-register" value="false"/>
+    <param name="force-register-domain" value="$${domain}"/>
+    <param name="force-register-db-domain" value="$${domain}"/>
+    <param name="all-reg-options-in-event" value="true"/>
+    
+    <!-- WebSocket Settings -->
+    <param name="ws-binding" value=":7443"/>
+    <param name="wss-binding" value=":7443"/>
+    <param name="ws-connect-timeout" value="30"/>
+    <param name="ws-read-timeout" value="30"/>
+    <param name="ws-write-timeout" value="30"/>
+  </settings>
+
+  <!-- Gateways: External Trunk -->
+  <gateways>
+    <X-PRE-PROCESS cmd="include" data="../gateways/*.xml"/>
+  </gateways>
+
+  <!-- Aliases -->
+  <aliases>
+  </aliases>
+
+  <!-- Domains -->
+  <domains>
+    <domain name="all" alias="false" parse="true"/>
+  </domains>
+
+  <!-- Profiles -->
+  <profiles>
+    <profile name="default">
+      <param name="codec-prefs" value="$${global_codec_prefs}"/>
+      <param name="realm" value="$${domain}"/>
+      <param name="challenge-realm" value="auto_from"/>
+      <param name="dtmf-type" value="info"/>
+      <param name="caller-id-type" value="pidf"/>
+      <param name="presence-probe-interval" value="30"/>
+      <param name="send-message-query-on-ping" value="true"/>
+    </profile>
+  </profiles>
+</profile>

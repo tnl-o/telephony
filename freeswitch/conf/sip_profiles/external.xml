@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- External SIP Profile: Trunk to FreePBX -->
+<!-- UDP/TCP + G.711 Codec for PSTN Gateway -->
+
+<profile name="external">
+  <settings>
+    <param name="auth-calls" value="false"/>
+    <param name="debug" value="0"/>
+    <param name="sip-port" value="5061"/>
+    <param name="rtp-ip" value="100.64.0.10"/>
+    <param name="sip-ip" value="100.64.0.10"/>
+    
+    <!-- NAT Handling -->
+    <param name="ext-rtp-ip" value="$${external_rtp_ip}"/>
+    <param name="ext-sip-ip" value="$${external_sip_ip}"/>
+    <param name="apply-inbound-acl" value="lan"/>
+    <param name="apply-register-acl" value="lan"/>
+    
+    <!-- Codecs: G.711 ulaw/alaw for PSTN compatibility -->
+    <param name="inbound-codec-prefs" value="PCMU,PCMA"/>
+    <param name="outbound-codec-prefs" value="PCMU,PCMA"/>
+    
+    <!-- Timers -->
+    <param name="max-authentications" value="100"/>
+    <param name="max-registrations" value="10"/>
+    <param name="force-register-domain" value="$${domain}"/>
+    
+    <!-- Disable TLS for external trunk (use internal for WSS) -->
+    <param name="tls" value="false"/>
+    <param name="ws-binding" value=":5062"/>
+    <param name="wss-binding" value=":5063"/>
+  </settings>
+
+  <gateways>
+    <X-PRE-PROCESS cmd="include" data="../gateways/*.xml"/>
+  </gateways>
+
+  <aliases>
+  </aliases>
+
+  <domains>
+    <domain name="all" alias="false" parse="true"/>
+  </domains>
+</profile>

@@ -1,0 +1,31 @@
+# FreeSWITCH Configuration Template
+# Copy this file to freeswitch.conf and edit values
+
+[general]
+# Domain for SIP registration
+domain = telephony.local
+
+# External IP addresses (for NAT handling)
+# Set to your server's LAN IP or leave auto
+external_rtp_ip = 100.64.0.10
+external_sip_ip = 100.64.0.10
+
+# Codec preferences (Opus first, then G.711)
+global_codec_prefs = OPUS,PCMU,PCMA
+
+[trunk]
+# FreePBX Trunk Configuration
+freepbx_ip = 100.64.0.50
+freepbx_username = freeswitch_trunk
+freepbx_password = CHANGE_ME_PASSWORD
+
+# Use registration? (true/false)
+freepbx_register = false
+
+[internal_extensions]
+# Extension range
+min_extension = 1000
+max_extension = 5999
+
+# Default language
+default_language = ru

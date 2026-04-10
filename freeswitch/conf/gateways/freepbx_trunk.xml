@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Gateway Configuration: FreePBX Trunk -->
+<!-- Edit FREEPBX_IP, USERNAME, PASSWORD before deployment -->
+
+<gateway name="freepbx_trunk">
+  <!-- FreePBX IP Address (Change this!) -->
+  <param name="realm" value="100.64.0.50"/>
+  <param name="from-domain" value="100.64.0.50"/>
+  
+  <!-- SIP Credentials (if required by FreePBX) -->
+  <param name="username" value="freeswitch_trunk"/>
+  <param name="password" value="CHANGE_ME_PASSWORD"/>
+  
+  <!-- Registration (optional, depends on FreePBX setup) -->
+  <param name="register" value="false"/>
+  <param name="retry-seconds" value="30"/>
+  
+  <!-- Codecs: G.711 for PSTN compatibility -->
+  <param name="codec-prefs" value="PCMU,PCMA"/>
+  
+  <!-- CID Handling -->
+  <param name="caller-id-in-from" value="true"/>
+  <param name="extension-in-contact" value="true"/>
+  
+  <!-- Network Settings -->
+  <param name="context" value="public"/>
+  <param name="expire-seconds" value="3600"/>
+  <param name="ping" value="30"/>
+  
+  <!-- Disable TLS for trunk (uses UDP/TCP) -->
+  <param name="tls" value="false"/>
+</gateway>

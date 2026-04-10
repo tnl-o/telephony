@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- FreeSWITCH Main Configuration -->
+
+<configuration name="switch.conf" description="Core Switch">
+  <settings>
+    <param name="loglevel" value="debug"/>
+    <param name="dump-cores" value="yes"/>
+    <param name="colorize-console" value="true"/>
+    <param name="auto-create-schemas" value="true"/>
+    <param name="max-sessions" value="1000"/>
+    <param name="min-dtmf-gap" value="80"/>
+  </settings>
+</configuration>
+
+<configuration name="sofia.conf" description="SIP Endpoint Module">
+  <global_settings>
+    <param name="log-level" value="0"/>
+    <param name="auto-restart" value="true"/>
+    <param name="debug-presence" value="0"/>
+    <param name="capture-server" value=""/>
+  </global_settings>
+
+  <profiles>
+    <!-- Internal Profile: WebRTC Clients (WSS, Opus) -->
+    <X-PRE-PROCESS cmd="include" data="sip_profiles/internal.xml"/>
+    
+    <!-- External Profile: Trunk to FreePBX (UDP/TCP, G.711) -->
+    <X-PRE-PROCESS cmd="include" data="sip_profiles/external.xml"/>
+  </profiles>
+</configuration>
+
+<configuration name="acl.conf" description="Network Lists">
+  <network-lists>
+    <!-- Local Network: Docker CGNAT Range -->
+    <list name="lan" default="allow">
+      <node network="100.64.0.0/10" action="allow"/>
+      <node network="127.0.0.0/8" action="allow"/>
+      <node network="::1" action="allow"/>
+    </list>
+    
+    <!-- NAT Handling for RFC1918 + CGNAT -->
+    <list name="nat.auto_rfc1918" default="allow">
+      <node network="100.64.0.0/10" action="allow"/>
+      <node network="10.0.0.0/8" action="allow"/>
+      <node network="172.16.0.0/12" action="allow"/>
+      <node network="192.168.0.0/16" action="allow"/>
+    </list>
+  </network-lists>
+</configuration>
+
+<configuration name="logging.conf" description="Logging">
+  <settings>
+    <param name="log-level" value="7"/>
+    <param name="console-loglevel" value="info"/>
+  </settings>
+  <mappings>
+    <map name="all" value="console,debug,info,notice,warning,err,crit,alert"/>
+  </mappings>
+</configuration>
+
+<configuration name="codec_opus_openbsd.conf" description="Opus Codec">
+  <settings>
+    <param name="bitrate" value="48000"/>
+    <param name="use-vbr" value="true"/>
+    <param name="complexity" value="10"/>
+    <param name="application" value="audio"/>
+    <param name="packet-loss-percent" value="20"/>
+    <param name="fec-type" value="off"/>
+  </settings>
+</configuration>
+
+<configuration name="event_socket.conf" description="Event Socket">
+  <settings>
+    <param name="nat-map" value="false"/>
+    <param name="listen-ip" value="100.64.0.10"/>
+    <param name="listen-port" value="8021"/>
+    <param name="apply-inbound-acl" value="lan"/>
+    <param name="stop-on-bind-error" value="true"/>
+  </settings>
+</configuration>
