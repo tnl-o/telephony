@@ -1,27 +1,7 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- FreeSWITCH Gateway Configuration for FreePBX Trunk -->
-<include>
-  <gateway name="freepbx_trunk">
-    <!-- FreePBX IP Address (configure via environment or edit manually) -->
-    <param name="realm" value="192.168.1.100"/>
-    <param name="username" value="freeswitch_trunk"/>
-    <param name="password" value="trunk_password_change_me"/>
-    
-    <!-- SIP Settings -->
-    <param name="from-domain" value="192.168.1.100"/>
-    <param name="proxy" value="192.168.1.100"/>
-    <param name="register" value="false"/>
-    <param name="retry-seconds" value="30"/>
-    <param name="caller-id-in-from" value="true"/>
-    
-    <!-- Codec Preferences: G.711 for trunk compatibility -->
-    <param name="codec-prefs" value="PCMA,PCMU"/>
-    
-    <!-- ACL -->
-    <param name="apply-inbound-acl" value="lan"/>
-    <param name="apply-register-acl" value="lan"/>
-    
-    <!-- Context for incoming calls from FreePBX -->
-    <param name="context" value="public"/>
-  </gateway>
-</include>
+<!--
+  ЭТОТ ФАЙЛ НЕ ИСПОЛЬЗУЕТСЯ — FreeSWITCH читает конфигурацию из Docker image.
+  Реальная конфигурация: /etc/freeswitch/gateways/freepbx_trunk.xml (в контейнере)
+  См. freeswitch/conf/gateways/freepbx_trunk.xml в репозитории.
+  
+  Для изменения настроек шлюза — правьте freeswitch/conf/gateways/freepbx_trunk.xml
+-->

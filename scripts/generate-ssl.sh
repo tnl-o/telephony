@@ -10,8 +10,10 @@ CERT_FILE="$SSL_DIR/cert.pem"
 KEY_FILE="$SSL_DIR/key.pem"
 CA_FILE="$SSL_DIR/ca.pem"
 DAYS=3650
+LAN_IP="${1:-192.168.0.18}"
 
 echo "🔐 Generating SSL certificates for local telephony system..."
+echo "   LAN IP: $LAN_IP"
 
 # Create SSL directory if not exists
 mkdir -p "$SSL_DIR"
@@ -30,7 +32,7 @@ openssl req -new -x509 \
     -out "$CERT_FILE" \
     -days $DAYS \
     -subj "/C=RU/ST=Moscow/L=Moscow/O=Company/OU=IT/CN=telephony.local" \
-    -addext "subjectAltName=DNS:telephony.local,DNS:localhost,IP:100.64.0.5,IP:100.64.0.10"
+    -addext "subjectAltName=DNS:telephony.local,DNS:localhost,IP:127.0.0.1,IP:${LAN_IP}"
 
 # Copy cert to CA file (for simplicity in local setup)
 cp "$CERT_FILE" "$CA_FILE"

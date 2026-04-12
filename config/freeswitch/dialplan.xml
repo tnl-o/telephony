@@ -1,40 +1,7 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- FreeSWITCH Dialplan Configuration -->
-<include>
-  <!-- Internal Extensions (1000-5999) -->
-  <extension name="internal_call">
-    <condition field="destination_number" expression="^(1[0-5][0-9]{2})$">
-      <action application="answer"/>
-      <action application="sleep" value="1000"/>
-      <action application="bridge" value="user/${destination_number}@internal"/>
-    </condition>
-  </extension>
-
-  <!-- Outbound Calls to FreePBX Trunk (9 + number) -->
-  <extension name="outbound_call">
-    <condition field="destination_number" expression="^9(.+)$">
-      <action application="answer"/>
-      <action application="sleep" value="500"/>
-      <!-- Strip leading 9 and send to FreePBX trunk -->
-      <action application="set" value="effective_caller_id_name=${caller_id_name}"/>
-      <action application="set" value="effective_caller_id_number=${caller_id_number}"/>
-      <action application="bridge" value="sofia/gateway/freepbx_trunk/$1"/>
-    </condition>
-  </extension>
-
-  <!-- Direct Inward Dialing (DID) from FreePBX -->
-  <extension name="did_routing">
-    <condition field="destination_number" expression="^(1[0-5][0-9]{2})$">
-      <action application="answer"/>
-      <action application="sleep" value="500"/>
-      <action application="bridge" value="user/${destination_number}@internal"/>
-    </condition>
-  </extension>
-
-  <!-- Default: Reject unknown numbers -->
-  <extension name="reject_unknown">
-    <condition field="destination_number" expression="^.*$">
-      <action application="respond" value="404"/>
-    </condition>
-  </extension>
-</include>
+<!--
+  ЭТОТ ФАЙЛ НЕ ИСПОЛЬЗУЕТСЯ — FreeSWITCH читает конфигурацию из Docker image.
+  Реальная конфигурация: /etc/freeswitch/dialplan/default/00_telephony_internal.xml (в контейнере)
+  См. freeswitch/conf/dialplan/default.xml в репозитории.
+  
+  Для изменения маршрутизации звонков — правьте freeswitch/conf/dialplan/default.xml
+-->

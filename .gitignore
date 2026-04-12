@@ -1,3 +1,4 @@
+.env
 frontend/dist/
 config/ssl/*.pem
 node_modules/

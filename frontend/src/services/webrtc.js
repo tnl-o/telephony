@@ -1,13 +1,25 @@
 import JsSIP from 'jssip';
 
-/** STUN + пул кандидатов: Chrome по умолчанию маскирует host-кандидаты в mDNS (.local), FreeSWITCH их не резолвит. */
+/** Должен совпадать с domain/domain_name во FreeSWITCH (см. freeswitch/docker/vars-append.inc и FREESWITCH_HOST в compose). */
+const DEFAULT_SIP_DOMAIN = '100.64.1.10';
+
+/** STUN + пул кандидатов: Chrome маскирует host ICE в mDNS (.local), FreeSWITCH их не резолвит — нужен srflx/relay.
+ *  - На том же хосте, что и UI, можно поднять coturn :3478 — добавляем stun:<hostname>:3478.
+ *  - Публичные STUN помогают, когда есть выход в интернет. */
 function defaultPcConfig() {
+  const host = typeof window !== 'undefined' ? window.location.hostname : '';
+  const servers = [];
+  if (host && host !== 'localhost' && host !== '127.0.0.1') {
+    servers.push({ urls: `stun:${host}:3478` });
+  } else {
+    servers.push({ urls: 'stun:127.0.0.1:3478' });
+  }
+  servers.push(
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' }
+  );
   return {
-    iceServers: [
-      { urls: 'stun:stun.l.google.com:19302' },
-      { urls: 'stun:stun1.l.google.com:19302' },
-      { urls: 'stun:stun2.l.google.com:19302' }
-    ],
+    iceServers: servers,
     iceCandidatePoolSize: 10
   };
 }
@@ -16,6 +28,7 @@ class WebRTCService {
   constructor() {
     this.ua = null;
     this.session = null;
+    this.sipDomain = DEFAULT_SIP_DOMAIN;
 
     // Callbacks
     this.onCallStateChange    = null;
@@ -30,15 +43,17 @@ class WebRTCService {
     }
     this.session = null;
 
-    // Always use /sip proxied through nginx (WSS → WS to FreeSWITCH:5080)
+    // Прямое подключение к FreeSWITCH:7443 (минуя nginx)
     const wsUrl =
       user.wssUrl ||
-      `wss://${window.location.host}/sip`;
+      `wss://${window.location.hostname}:7443`;
     const socket = new JsSIP.WebSocketInterface(wsUrl);
+
+    this.sipDomain = user.sipDomain || DEFAULT_SIP_DOMAIN;
 
     const configuration = {
       sockets:    [socket],
-      uri:        `sip:${user.extension}@100.64.1.10`,
+      uri:        `sip:${user.extension}@${this.sipDomain}`,
       password:   user.sipPassword,
       display_name: user.displayName,
       register:   true,
@@ -112,8 +127,11 @@ class WebRTCService {
         this.session = null;
       });
 
-      session.on('failed', (reason) => {
-        console.warn('[SIP] Call failed:', reason?.cause ?? reason);
+      session.on('failed', (data) => {
+        const msg = data?.message;
+        const sip = msg && typeof msg === 'object' ? msg.status_code : undefined;
+        const phrase = msg && typeof msg === 'object' ? msg.reason_phrase : undefined;
+        console.warn('[SIP] Call failed:', data?.cause ?? data, sip ? `SIP ${sip} ${phrase || ''}` : '');
         if (this.onCallStateChange) this.onCallStateChange('failed', null);
         this.session = null;
       });
@@ -160,7 +178,7 @@ class WebRTCService {
     };
 
     try {
-      this.ua.call(`sip:${extension}@100.64.1.10`, options);
+      this.ua.call(`sip:${extension}@${this.sipDomain}`, options);
     } catch (e) {
       console.error('[SIP] ua.call failed:', e);
       throw e;
@@ -210,6 +228,7 @@ class WebRTCService {
       this.ua = null;
     }
     this.session = null;
+    this.sipDomain = DEFAULT_SIP_DOMAIN;
   }
 
   /* ── Callback setters ────────────────────────────────────── */

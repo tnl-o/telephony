@@ -25,7 +25,8 @@
   <!-- Network Settings -->
   <param name="context" value="public"/>
   <param name="expire-seconds" value="3600"/>
-  <param name="ping" value="30"/>
+  <!-- Пинг отключён — FreePBX может не отвечать на OPTIONS, спам в логах 408 -->
+  <param name="ping" value="0"/>
   
   <!-- Disable TLS for trunk (uses UDP/TCP) -->
   <param name="tls" value="false"/>

@@ -1,6 +1,6 @@
 /**
  * Dev-only auth: map username -> password from DEV_USERS env.
- * Format: user1:pass1,user2:pass2 (password may contain ':' if using last split — keep passwords simple).
+ * Format: user1:pass1,user2:pass2
  */
 function parseDevUsers(env) {
   const map = new Map();
@@ -25,7 +25,6 @@ function buildSimpleAuth() {
     async authenticate(username, password) {
       const key = String(username).trim().toLowerCase();
       const expected = map.get(key);
-      console.log(`[SimpleAuth] Attempt: username="${key}", provided="${password}", expected="${expected}"`);
       if (expected === undefined || expected !== password) {
         throw new Error('Invalid credentials');
       }
@@ -42,4 +41,32 @@ function buildSimpleAuth() {
   };
 }
 
-module.exports = { parseDevUsers, buildSimpleAuth };
+/**
+ * Name-based auth: login by full name (ФИО) without a password.
+ * Accepts any non-empty name — Cyrillic, spaces, hyphens all OK.
+ * The normalized (trimmed, collapsed spaces, lowercased) name is used as the
+ * stable user ID; the original trimmed form is kept as displayName.
+ */
+function normalizeName(raw) {
+  return raw.trim().replace(/\s+/g, ' ').toLowerCase();
+}
+
+function buildNameAuth() {
+  return {
+    async authenticate(rawName) {
+      const name = (rawName || '').trim().replace(/\s+/g, ' ');
+      if (!name) throw new Error('Введите ФИО');
+      const normalized = name.toLowerCase();
+      return {
+        username: normalized,   // stable key used in DB
+        displayName: name,      // human-readable, as entered
+        email: '',
+        department: '',
+        telephoneNumber: null,
+        dn: ''
+      };
+    }
+  };
+}
+
+module.exports = { parseDevUsers, buildSimpleAuth, buildNameAuth, normalizeName };

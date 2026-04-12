@@ -7,12 +7,13 @@ export const authAPI = {
     const response = await axios.post(`${API_BASE}/auth/login`, { username, password });
     if (response.data.user) {
       const sc = response.data.sipCredentials;
-      localStorage.setItem(
+      sessionStorage.setItem(
         'user',
         JSON.stringify({
           ...response.data.user,
           sipPassword: sc?.password,
-          wssUrl: sc?.wssUrl
+          wssUrl: sc?.wssUrl,
+          sipDomain: sc?.domain
         })
       );
     }
@@ -20,7 +21,7 @@ export const authAPI = {
   },
 
   logout: async () => {
-    const raw = localStorage.getItem('user');
+    const raw = sessionStorage.getItem('user');
     const user = raw ? JSON.parse(raw) : null;
     if (user?.username) {
       try {
@@ -29,17 +30,17 @@ export const authAPI = {
         /* ignore network errors on logout */
       }
     }
-    localStorage.removeItem('user');
+    sessionStorage.removeItem('user');
   },
 
   getCurrentUser: async () => {
-    const raw = localStorage.getItem('user');
+    const raw = sessionStorage.getItem('user');
     if (!raw) return null;
     try {
       const user = JSON.parse(raw);
       return { user };
     } catch {
-      localStorage.removeItem('user');
+      sessionStorage.removeItem('user');
       return null;
     }
   }

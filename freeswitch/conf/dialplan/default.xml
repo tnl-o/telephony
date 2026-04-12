@@ -2,21 +2,20 @@
 <!-- Dialplan: Internal and External Routing -->
 
 <include>
-  <!-- Internal: не answer до bridge — иначе WebRTC A-leg сразу 200 OK и B-leg (второй клиент) часто не получает нормальный INVITE/ringing -->
+  <!-- Internal: 1000–5999 — звонки между пользователями через WSS -->
   <extension name="internal_call">
-    <condition field="destination_number" expression="^(1[0-5][0-9]{2}|[2-5][0-9]{3})$">
+    <condition field="destination_number" expression="^([1-5][0-9]{3})$">
       <action application="set" data="hangup_after_bridge=true"/>
-      <!-- Без continue_on_fail: иначе при неудачном bridge FS переходит к следующему extension
-           (invalid_number с answer+тон) — у A-leg приходит 200 OK, UI «разговор», а B-leg не звонил. -->
       <action application="ring_ready"/>
-      <!-- Прямой sofia/internal + SRTP/WebRTC на B-leg; user/ иногда хуже доставляет INVITE на WSS за NAT/nginx. -->
-      <action application="bridge" data="{ignore_early_media=true,rtp_secure_media=true,media_webrtc=true}sofia/internal/${destination_number}@$${domain_name}"/>
+      <!-- sofia/internal — доставит INVITE через тот же WSS транспорт, на котором зарегистрирован абонент -->
+      <action application="bridge" data="{rtp_secure_media=true,media_webrtc=true}sofia/internal/${destination_number}@$${domain_name}"/>
     </condition>
   </extension>
 
   <!-- External Calls: Prefix 9 + Number (via FreePBX Trunk) -->
   <extension name="external_call">
     <condition field="destination_number" expression="^9(.+)$">
+      <action application="answer"/>
       <action application="set" value="effective_caller_id_number=${caller_id_number}"/>
       <action application="set" value="effective_caller_id_name=${caller_id_name}"/>
       <action application="bridge" value="sofia/gateway/freepbx_trunk/$1"/>
@@ -33,7 +32,7 @@
 
   <!-- Номера вне внутреннего диапазона / без префикса 9 / не экстренные — не пересекаться с internal_call -->
   <extension name="invalid_number">
-    <condition field="destination_number" expression="^(?!1[0-5][0-9]{2}$|[2-5][0-9]{3}$|9\d+$|101$|102$|103$|112$).+$">
+    <condition field="destination_number" expression="^(?!([1-5][0-9]{3})$|9\d+$|101$|102$|103$|112$).+$">
       <action application="answer"/>
       <action application="playback" value="tone_stream://%(200,0,500);%(200,0,700)"/>
       <action application="hangup"/>

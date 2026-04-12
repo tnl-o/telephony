@@ -1,97 +1,10 @@
-user_agent_domain=telephony.local
-domain=telephony.local
-rtp-ip=$${local_ip_v4}
-ext-rtp-ip=$${external_rtp_ip}
-sip-ip=$${local_ip_v4}
-ext-sip-ip=$${external_sip_ip}
-ws-binding=100.64.0.10:5061
-wss-binding=100.64.0.10:5061
-
+<!-- 
+  ЭТОТ ФАЙЛ НЕ ИСПОЛЬЗУЕТСЯ — FreeSWITCH читает конфигурацию из Docker image.
+  Реальная конфигурация: /etc/freeswitch/sip_profiles/internal.xml (в контейнере)
+  См. freeswitch/conf/sip_profiles/internal.xml в репозитории.
+  
+  Для изменения настроек SIP — правьте freeswitch/conf/sip_profiles/internal.xml
+-->
 <profiles>
-  <profile name="internal">
-    <gateways>
-    </gateways>
-
-    <settings>
-      <param name="debug" value="0"/>
-      <param name="sip-trace" value="no"/>
-      <param name="context" value="public"/>
-      <param name="rfc2833-payload" value="101"/>
-      <param name="sip-port" value="5060"/>
-      <param name="dialplan" value="XML"/>
-      <param name="dtmf-duration" value="2000"/>
-      <param name="codec-prefs" value="$${global_codec_prefs}"/>
-      <param name="inbound-codec-prefs" value="$${global_inbound_codec_prefs}"/>
-      <param name="outbound-codec-prefs" value="$${global_outbound_codec_prefs}"/>
-      <param name="hold-music" value="$${hold_music}"/>
-      <param name="rtp-timer-name" value="soft"/>
-      <param name="rtp-ip" value="$${rtp-ip}"/>
-      <param name="ext-rtp-ip" value="$${ext-rtp-ip}"/>
-      <param name="sip-ip" value="$${sip-ip}"/>
-      <param name="ext-sip-ip" value="$${ext-sip-ip}"/>
-      <param name="apply-inbound-acl" value="lan"/>
-      <param name="apply-register-acl" value="lan"/>
-      <param name="db-name" value="sofia_internal"/>
-      <param name="auth-calls" value="true"/>
-      <param name="nonce-ttl" value="60"/>
-      <param name="force-register-domain" value="$${domain}"/>
-      <param name="force-register-db-domain" value="$${domain}"/>
-      <param name="challenge-realm" value="auto_from"/>
-      <param name="disable-transfer" value="false"/>
-      <param name="disable-hold" value="false"/>
-      <param name="enable-3pcc" value="false"/>
-      <param name="aggressive-nat-detection" value="false"/>
-      <param name="inbound-reg-force-new" value="false"/>
-      <param name="NDLB-connect-retries" value="0"/>
-      <param name="NDLB-sendoptions-autoretry" value="0"/>
-      <param name="NDLB-bad-inv-rtimer" value="0"/>
-      <param name="tls" value="false"/>
-      <param name="tls-only" value="false"/>
-      <param name="tls-bind-params" value="transport=tls"/>
-      <param name="tls-sip-port" value="5061"/>
-      <param name="tls-cert-dir" value="/etc/freeswitch/tls"/>
-      <param name="tls-verify-date" value="false"/>
-      <param name="tls-verify-policy" value="none"/>
-      <param name="tls-verify-depth" value="2"/>
-      <param name="tls-verify-in-subjects" value=""/>
-      
-      <!-- WebRTC Settings -->
-      <param name="ws-binding" value="$${ws-binding}"/>
-      <param name="wss-binding" value="$${wss-binding}"/>
-      <param name="wss-dialplan" value="XML"/>
-      <param name="wss-context" value="public"/>
-      <param name="wss-enable-3pcc" value="false"/>
-      
-      <!-- Codec Preferences: Opus first for WebRTC, then G.711 for trunk -->
-      <param name="inbound-codec-negotiation" value="generous"/>
-      <param name="pass-rfc2833" value="true"/>
-    </settings>
-  </profile>
-
-  <profile name="external">
-    <gateways>
-    </gateways>
-
-    <settings>
-      <param name="context" value="public"/>
-      <param name="sip-port" value="5070"/>
-      <param name="dialplan" value="XML"/>
-      <param name="codec-prefs" value="PCMA,PCMU"/>
-      <param name="rtp-ip" value="$${rtp-ip}"/>
-      <param name="ext-rtp-ip" value="$${ext-rtp-ip}"/>
-      <param name="sip-ip" value="$${sip-ip}"/>
-      <param name="ext-sip-ip" value="$${ext-sip-ip}"/>
-      <param name="apply-inbound-acl" value="wan"/>
-      <param name="apply-register-acl" value="wan"/>
-      <param name="auth-calls" value="true"/>
-      <param name="force-register-domain" value="$${domain}"/>
-      <param name="force-register-db-domain" value="$${domain}"/>
-      <param name="challenge-realm" value="auto_from"/>
-      
-      <!-- Trunk to FreePBX settings -->
-      <param name="disable-transfer" value="false"/>
-      <param name="disable-hold" value="false"/>
-      <param name="enable-3pcc" value="true"/>
-    </settings>
-  </profile>
+  <!-- Конфигурация в Docker image -- freeswitch/conf/sip_profiles/internal.xml -->
 </profiles>

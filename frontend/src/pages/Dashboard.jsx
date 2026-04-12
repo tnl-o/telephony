@@ -68,11 +68,9 @@ function Dashboard({ user, onLogout }) {
       ...base,
       extension: String(base.extension ?? ''),
       sipPassword: base.sipPassword,
-      wssUrl:
-        base.wssUrl ||
-        (window.location.port
-          ? `wss://${window.location.host}/sip`
-          : `wss://${window.location.hostname}:7443`)
+      sipDomain: base.sipDomain || base.domain,
+      /* Всегда через nginx /sip (порт 443 по умолчанию даёт пустой location.port — не уходить на :7443 с хоста). */
+      wssUrl: base.wssUrl || `wss://${window.location.host}/sip`
     };
     if (!sipUser.extension || !sipUser.sipPassword) {
       setSipStatus('failed');

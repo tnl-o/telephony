@@ -11,6 +11,10 @@
 #   3. Run: ./scripts/generate-ssl.sh
 #   4. docker compose up -d
 #   5. Open https://<host-ip>
+#
+# LAN / WebRTC: LAN_PUBLISH_IP = IP сервера в вашей Wi‑Fi/LAN (как в адресной строке https://...).
+# Нужен и coturn (STUN), и FreeSWITCH: в SDP должен быть этот IP для RTP, иначе медиа не дойдёт с ПК/телефона.
+# Переопределите в .env при другом адресе.
 # ==============================================================================
 
 services:
@@ -19,6 +23,8 @@ services:
     build:
       context: ./freeswitch
       dockerfile: Dockerfile
+      args:
+        LAN_PUBLISH_IP: ${LAN_PUBLISH_IP:-192.168.0.18}
     container_name: freeswitch
     hostname: freeswitch
     networks:
@@ -32,11 +38,31 @@ services:
       - freeswitch_directory:/etc/freeswitch/directory/default
     ports:
       - "5060:5060/udp"   # SIP
-      - "5061:5061/tcp"   # WSS
+      - "7443:7443/tcp"   # WSS (прямое подключение браузеров, минуя nginx)
       - "16384-16448:16384-16448/udp" # RTP
+    environment:
+      LAN_PUBLISH_IP: ${LAN_PUBLISH_IP:-192.168.0.18}
     restart: unless-stopped
     depends_on:
       - backend
+
+  # STUN для браузеров (mDNS → реальные ICE-кандидаты для FreeSWITCH)
+  coturn:
+    image: coturn/coturn:latest
+    container_name: coturn
+    networks:
+      telephony_net:
+        ipv4_address: 100.64.1.40
+    ports:
+      - "3478:3478/udp"
+      - "3478:3478/tcp"
+    environment:
+      LAN_PUBLISH_IP: ${LAN_PUBLISH_IP:-192.168.0.18}
+    command:
+      - /bin/sh
+      - -c
+      - exec turnserver -n --log-file=stdout --no-auth --no-tls --listening-ip=0.0.0.0 --listening-port=3478 --external-ip=100.64.1.40/$$LAN_PUBLISH_IP
+    restart: unless-stopped
 
   # Backend API & LDAP Auth
   backend:
@@ -56,11 +82,10 @@ services:
       - freeswitch_directory:/etc/freeswitch/directory/default
     environment:
       - NODE_ENV=production
-      - AUTH_MODE=simple
-      - DEV_USERS=demo:demo123,test:test123
-      - DEV_SIP_PASSWORD=dev_sip_pass_2024
+      - AUTH_MODE=name
+      - LAN_PUBLISH_IP=${LAN_PUBLISH_IP:-192.168.0.18}
       - FREESWITCH_HOST=100.64.1.10
-      - FREESWITCH_WSS_PORT=5061
+      - FREESWITCH_WSS_PORT=7443
       - FREESWITCH_DIR_PATH=/etc/freeswitch/directory/default
       - FREESWITCH_ESL_PORT=8021
       - FREESWITCH_ESL_PASSWORD=ClueCon
@@ -91,7 +116,6 @@ services:
     volumes:
       - ./config/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./config/ssl:/etc/nginx/ssl:ro
-      - ./frontend/dist:/usr/share/nginx/html:ro
     ports:
       - "80:80"
       - "443:443"
@@ -99,6 +123,7 @@ services:
     depends_on:
       - frontend
       - backend
+      - freeswitch
 
 networks:
   telephony_net:

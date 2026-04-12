@@ -18,10 +18,9 @@ services:
       - ./freeswitch/init-public-host.sh:/init-public-host.sh:ro
       - ./freeswitch/directory/default.xml:/etc/freeswitch/directory/default.xml:ro
       - ./freeswitch/directory/local-extensions.xml:/etc/freeswitch/directory/local-extensions.xml:ro
+      - ./freeswitch/dialplan/default.xml:/etc/freeswitch/dialplan/default.xml:ro
     ports:
       - "7443:7443/tcp"
-      - "5060:5060/udp"
-      - "5060:5060/tcp"
       - "16384-16448:16384-16448/udp"
     restart: unless-stopped
 
@@ -49,6 +48,19 @@ services:
     networks:
       telephony_dev:
         ipv4_address: 100.64.0.30
+    restart: unless-stopped
+
+  coturn:
+    image: coturn/coturn:latest
+    container_name: dev-coturn
+    hostname: coturn
+    # Minimal STUN-only server accessible from browser at stun:127.0.0.1:3478
+    # Needed because Chrome mDNS-obfuscates host ICE candidates (.local hostnames)
+    # and FreeSWITCH can't resolve them; srflx candidates from STUN carry real IPs.
+    command: >
+      -n --log-file=stdout --no-auth --no-tls
+      --listening-port=3478 --external-ip=127.0.0.1
+    network_mode: host
     restart: unless-stopped
 
   nginx:

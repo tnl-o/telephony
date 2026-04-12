@@ -7,10 +7,12 @@ require('dotenv').config();
 
 const LDAPService = require('./ldap');
 const UserService = require('./userService');
-const { buildSimpleAuth } = require('./simpleAuth');
+const { buildSimpleAuth, buildNameAuth } = require('./simpleAuth');
 
-const authMode = (process.env.AUTH_MODE || 'ldap').toLowerCase();
-const simpleAuth = authMode === 'simple' ? buildSimpleAuth() : null;
+const authMode = (process.env.AUTH_MODE || 'name').toLowerCase();
+const simpleAuth = authMode === 'simple' ? buildSimpleAuth()
+                 : authMode === 'name'   ? buildNameAuth()
+                 : null;
 
 // Configuration
 const config = {
@@ -69,22 +71,15 @@ wss.on('connection', (ws) => {
 
 /**
  * Build the SIP WebSocket URL for the client.
- * Prefers SIP_WSS_URL env var (set in .env for dev).
- * Falls back to constructing from request headers:
- *   wss://<public-host>/sip  (nginx proxies /sip → freeswitch:5080)
+ * Браузеры подключаются напрямую к FreeSWITCH:7443 (минуя nginx).
+ * Использует SIP_WSS_URL из .env или формирует из LAN_PUBLISH_IP.
  */
 function buildSipWssUrl(req) {
   if (process.env.SIP_WSS_URL) return process.env.SIP_WSS_URL;
 
-  // X-Forwarded-Host is now set to $http_host by nginx (includes port)
-  const fwdHost = req.get('x-forwarded-host');
-  if (fwdHost) return `wss://${fwdHost}/sip`;
-
-  const host = req.get('host');
-  if (host) return `wss://${host}/sip`;
-
-  const fallbackHost = process.env.WSS_PUBLIC_HOST || process.env.PUBLIC_HOST || 'localhost';
-  return `wss://${fallbackHost}/sip`;
+  // LAN_PUBLISH_IP — IP сервера в локальной сети
+  const lanIp = process.env.LAN_PUBLISH_IP || '192.168.0.18';
+  return `wss://${lanIp}:7443`;
 }
 
 function publicHostFromRequest(req) {
@@ -168,7 +163,9 @@ async function initialize() {
     await userService.generateFreeSwitchDirectory(config.freeswitchDirPath);
     // Tell FreeSWITCH to reload directory
     await reloadFreeSwitchXml();
-    if (authMode === 'simple') {
+    if (authMode === 'name') {
+      console.log('Auth: name-based (ФИО), no password required, LDAP skipped');
+    } else if (authMode === 'simple') {
       if (!simpleAuth.map.size) {
         console.error('AUTH_MODE=simple requires DEV_USERS (e.g. demo:demo,alice:alice123)');
         process.exit(1);
@@ -205,14 +202,19 @@ app.post('/api/auth/login', async (req, res) => {
   try {
     const { username, password } = req.body;
 
-    if (!username || !password) {
-      return res.status(400).json({ error: 'Username and password are required' });
+    if (!username) {
+      return res.status(400).json({ error: 'Username is required' });
+    }
+    if (authMode !== 'name' && !password) {
+      return res.status(400).json({ error: 'Password is required' });
     }
 
     const ldapUser =
-      authMode === 'simple'
-        ? await simpleAuth.authenticate(username, password)
-        : await ldapService.authenticate(username, password);
+      authMode === 'name'
+        ? await simpleAuth.authenticate(username)
+        : authMode === 'simple'
+          ? await simpleAuth.authenticate(username, password)
+          : await ldapService.authenticate(username, password);
 
     // Check if user exists in our database
     let user = userService.findByUsername(ldapUser.username);
@@ -256,7 +258,8 @@ app.post('/api/auth/login', async (req, res) => {
       sipCredentials: {
         extension: user.extension.toString(),
         password: user.sipPassword,
-        wssUrl: buildSipWssUrl(req)
+        wssUrl: buildSipWssUrl(req),
+        domain: config.freeswitchEsl.host
       }
     });
 

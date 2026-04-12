@@ -1,11 +1,14 @@
+ARG LAN_PUBLISH_IP=192.168.0.18
+
 FROM alpine:3.19 AS tls
+ARG LAN_PUBLISH_IP
 RUN apk add --no-cache openssl
 RUN mkdir -p /out \
   && openssl req -x509 -nodes -days 3650 -newkey rsa:2048 \
     -keyout /out/wss_key.pem \
     -out /out/wss_cert.pem \
-    -subj "/CN=100.64.1.10" \
-    -addext "subjectAltName=DNS:freeswitch,IP:100.64.1.10"
+    -subj "/CN=${LAN_PUBLISH_IP}" \
+    -addext "subjectAltName=DNS:freeswitch,IP:${LAN_PUBLISH_IP},IP:127.0.0.1"
 
 FROM safarov/freeswitch:latest
 

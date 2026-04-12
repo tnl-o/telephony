@@ -9,33 +9,33 @@
     "sipPassword": "devsip",
     "createdAt": "2026-04-10T19:59:04.214Z",
     "updatedAt": "2026-04-10T22:22:45.480Z",
-    "online": true,
+    "online": false,
     "lastSeen": "2026-04-10T22:22:45.481Z"
   },
   {
     "id": "alice",
     "username": "alice",
     "displayName": "Alice",
-    "email": "alice@dev.local",
-    "department": "Dev",
+    "email": "",
+    "department": "",
     "extension": 1001,
     "sipPassword": "devsip",
     "createdAt": "2026-04-10T20:22:31.547Z",
-    "updatedAt": "2026-04-10T22:23:07.113Z",
+    "updatedAt": "2026-04-12T10:11:24.087Z",
     "online": true,
-    "lastSeen": "2026-04-10T22:23:07.115Z"
+    "lastSeen": "2026-04-12T10:11:24.089Z"
   },
   {
     "id": "bob",
     "username": "bob",
     "displayName": "Bob",
-    "email": "bob@dev.local",
-    "department": "Dev",
+    "email": "",
+    "department": "",
     "extension": 1002,
     "sipPassword": "devsip",
     "createdAt": "2026-04-10T20:24:17.515Z",
-    "updatedAt": "2026-04-10T23:00:22.041Z",
-    "online": false,
-    "lastSeen": "2026-04-10T23:00:22.043Z"
+    "updatedAt": "2026-04-12T10:11:47.704Z",
+    "online": true,
+    "lastSeen": "2026-04-12T10:11:47.705Z"
   }
 ]

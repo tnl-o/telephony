@@ -2,6 +2,7 @@
 <configuration name="acl.conf" description="Network Lists">
   <network-lists>
     <list name="lan" default="allow">
+      <node type="allow" cidr="100.64.0.0/24"/>
       <node type="allow" cidr="100.64.1.0/24"/>
       <node type="allow" cidr="10.0.0.0/8"/>
       <node type="allow" cidr="172.16.0.0/12"/>
