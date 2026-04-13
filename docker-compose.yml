@@ -33,6 +33,7 @@ services:
         ipv6_address: fd00::10
     volumes:
       - ./config/freeswitch:/usr/local/freeswitch/conf/custom:ro
+      - ./config/ssl:/etc/nginx_ssl:ro
       - ./data/freeswitch:/usr/local/freeswitch/db
       - ./logs/freeswitch:/usr/local/freeswitch/log
       - freeswitch_directory:/etc/freeswitch/directory/default

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Internal SIP Profile: WebRTC Clients -->
-<!-- Прямое WSS подключение браузеров к FreeSWITCH:7443 (без nginx прокси) -->
+<!-- WSS :7443 с хоста (Docker publish); ice-lite + apply-candidate-acl=lan для ICE за Docker/NAT -->
 
 <profile name="internal">
   <!-- IP Binding: Docker CGNAT Address -->
@@ -10,7 +10,7 @@
     <param name="auth-calls" value="true"/>
     <param name="debug" value="0"/>
     <param name="sip-port" value="5060"/>
-    <!-- WSS (TLS) на :7443 — браузеры подключаются напрямую, минуя nginx -->
+    <!-- WSS TLS на :7443 (к nginx или напрямую) -->
     <param name="tls" value="true"/>
     <param name="tls-bind-params" value="transport=wss"/>
     <param name="tls-cert-dir" value="/etc/freeswitch/tls"/>
@@ -20,6 +20,8 @@
     <param name="apply-nat-acl" value="nat.auto_rfc1918"/>
     <!-- Регистрация с Contact за nginx (если кто-то ещё использует nginx): доставка INVITE на тот же сокет. -->
     <param name="NDLB-received-in-nat-reg-contact" value="true"/>
+    <!-- Aggressive NAT detection: игнорировать mDNS-подобные Contact (.invalid, .local) -->
+    <param name="aggressive-nat-detection" value="true"/>
     
     <!-- NAT Handling -->
     <param name="ext-rtp-ip" value="$${external_rtp_ip}"/>
@@ -35,19 +37,26 @@
     <param name="max-authentications" value="1000"/>
     <param name="max-registrations" value="5000"/>
     <param name="delete-subs-on-register" value="false"/>
+    <!-- Domain: должен совпадать с $${domain_name} (100.64.1.10) — иначе bridge sofia/internal/XXXX@domain не найдёт регистрацию -->
     <param name="force-register-domain" value="$${domain}"/>
     <param name="force-register-db-domain" value="$${domain}"/>
     <param name="all-reg-options-in-event" value="true"/>
     
     <!-- WebSocket Settings -->
-    <!-- WSS (TLS) on 7443 — браузеры подключаются напрямую -->
     <param name="wss-binding" value=":7443"/>
     <param name="ws-connect-timeout" value="30"/>
     <param name="ws-read-timeout" value="30"/>
     <param name="ws-write-timeout" value="30"/>
 
-    <!-- ICE candidate ACL: accept all candidates (host, srflx, relay) from browsers -->
-    <param name="rtp-candidate-acl" value="any"/>
+    <!-- ICE-Lite: FS объявляет a=ice-lite в SDP.
+         Браузер (full ICE agent) сам инициирует connectivity checks на ext-rtp-ip (192.168.0.18:PORT).
+         Docker DNAT пробрасывает на контейнер. FS отвечает на checks — не ищет кандидатов сам.
+         Без ice-lite FS делает selection из браузерских кандидатов и падает с
+         "no suitable candidates found" → INCOMPATIBLE_DESTINATION 488, потому что
+         192.168.0.x недостижим из контейнера 100.64.1.0/24 для ICE connectivity checks. -->
+    <param name="ice-lite" value="true"/>
+    <!-- Принимать ICE-кандидаты только из LAN-диапазона (нашей acl.conf "lan") -->
+    <param name="apply-candidate-acl" value="lan"/>
   </settings>
 
   <!-- Gateways: External Trunk -->

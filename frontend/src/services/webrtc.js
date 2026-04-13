@@ -43,10 +43,12 @@ class WebRTCService {
     }
     this.session = null;
 
-    // Прямое подключение к FreeSWITCH:7443 (минуя nginx)
+    // wssUrl с API (buildSipWssUrl): wss://<LAN>:7443; fallback — hostname:7443 как у Dashboard.
     const wsUrl =
       user.wssUrl ||
-      `wss://${window.location.hostname}:7443`;
+      (typeof window !== 'undefined'
+        ? `wss://${window.location.hostname}:7443`
+        : 'wss://localhost:7443');
     const socket = new JsSIP.WebSocketInterface(wsUrl);
 
     this.sipDomain = user.sipDomain || DEFAULT_SIP_DOMAIN;

@@ -71,13 +71,12 @@ wss.on('connection', (ws) => {
 
 /**
  * Build the SIP WebSocket URL for the client.
- * Браузеры подключаются напрямую к FreeSWITCH:7443 (минуя nginx).
- * Использует SIP_WSS_URL из .env или формирует из LAN_PUBLISH_IP.
+ * Прямое подключение браузеров к FreeSWITCH WSS :7443 (минуя nginx).
+ * В fs_path попадает реальный IP:порт браузера — FS доставляет INVITE через тот же сокет.
  */
 function buildSipWssUrl(req) {
   if (process.env.SIP_WSS_URL) return process.env.SIP_WSS_URL;
 
-  // LAN_PUBLISH_IP — IP сервера в локальной сети
   const lanIp = process.env.LAN_PUBLISH_IP || '192.168.0.18';
   return `wss://${lanIp}:7443`;
 }

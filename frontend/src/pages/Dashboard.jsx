@@ -69,8 +69,8 @@ function Dashboard({ user, onLogout }) {
       extension: String(base.extension ?? ''),
       sipPassword: base.sipPassword,
       sipDomain: base.sipDomain || base.domain,
-      /* Всегда через nginx /sip (порт 443 по умолчанию даёт пустой location.port — не уходить на :7443 с хоста). */
-      wssUrl: base.wssUrl || `wss://${window.location.host}/sip`
+      /* Прямое подключение к FreeSWITCH:7443. wssUrl приходит с бэкенда при логине. */
+      wssUrl: base.wssUrl || `wss://${window.location.hostname}:7443`
     };
     if (!sipUser.extension || !sipUser.sipPassword) {
       setSipStatus('failed');
@@ -116,7 +116,7 @@ function Dashboard({ user, onLogout }) {
       webrtcService.setOnCallStateChange(null);
       clearInterval(durationRef.current);
     };
-  }, [user.username, user.extension, user.sipPassword, user.wssUrl]);
+  }, [user.username, user.extension, user.sipPassword, user.wssUrl, user.sipDomain, user.domain]);
 
   const loadContacts = async () => {
     try {
