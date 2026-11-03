@@ -3,19 +3,15 @@
 
 <include>
   <!-- Internal: 1000–5999 — звонки между пользователями через WSS -->
-  <!-- 
-    sofia/internal — использует registration lookup в internal profile.
-    sip_invite_domain гарантирует что INVITE уйдёт в тот же домен что и регистрация.
-    originate_timeout предотвращает 503 при WSS-маршрутизации.
-  -->
+  <!-- Resolve the registered contact, including transport and fs_path, so the
+       INVITE returns over the recipient's existing WebSocket connection. -->
   <extension name="internal_call">
     <condition field="destination_number" expression="^([1-5][0-9]{3})$">
       <action application="set" data="hangup_after_bridge=true"/>
       <action application="ring_ready"/>
       <!-- domain=$${domain_name} = 100.64.1.10 — совпадает с force-register-domain в internal profile -->
       <action application="set" data="sip_invite_domain=$${domain_name}"/>
-      <!-- sip_force_contact: использовать fs_path (реальный WSS сокет) вместо Contact URI -->
-      <action application="bridge" data="{rtp_secure_media=true,media_webrtc=true,originate_timeout=30,sip_force_contact=true}sofia/internal/${destination_number}@$${domain_name}"/>
+      <action application="bridge" data="{rtp_secure_media=true,media_webrtc=true,originate_timeout=30}${sofia_contact(internal/${destination_number}@$${domain_name})}"/>
     </condition>
   </extension>
 

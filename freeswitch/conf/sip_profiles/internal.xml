@@ -10,9 +10,9 @@
     <param name="auth-calls" value="true"/>
     <param name="debug" value="0"/>
     <param name="sip-port" value="5060"/>
-    <!-- WSS TLS на :7443 (к nginx или напрямую) -->
-    <param name="tls" value="true"/>
-    <param name="tls-bind-params" value="transport=wss"/>
+    <!-- WSS uses wss-binding and wss.pem independently of SIP TLS.
+         Keep SIP TLS disabled: no separate agent.pem or TLS :5061 listener. -->
+    <param name="tls" value="false"/>
     <param name="tls-cert-dir" value="/etc/freeswitch/tls"/>
     <param name="tls-verify-date" value="false"/>
     <param name="apply-inbound-acl" value="lan"/>

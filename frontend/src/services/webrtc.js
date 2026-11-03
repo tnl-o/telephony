@@ -97,6 +97,10 @@ class WebRTCService {
     this.ua.on('newRTCSession', (data) => {
       const session = data.session;
       const fromRemote = data.originator === 'remote';
+      if (this.session && this.session !== session) {
+        session.terminate({ status_code: 486, reason_phrase: 'Busy Here' });
+        return;
+      }
 
       // Store so answer() / hangup() / mute() work without extra wiring
       this.session = session;
@@ -113,29 +117,30 @@ class WebRTCService {
         }
       });
 
-      session.on('accepted', () => {
-        console.log('[SIP] Call accepted');
+      let active = false;
+      const activate = () => {
+        if (active || this.session !== session) return;
+        active = true;
         if (this.onCallStateChange) this.onCallStateChange('active', session);
-      });
-
-      // 'confirmed' fires on 200 OK (outgoing); treat same as accepted
-      session.on('confirmed', () => {
-        if (this.onCallStateChange) this.onCallStateChange('active', session);
-      });
+      };
+      session.on('accepted', activate);
+      session.on('confirmed', activate);
 
       session.on('ended', () => {
+        if (this.session !== session) return;
         console.log('[SIP] Call ended');
-        if (this.onCallStateChange) this.onCallStateChange('ended', null);
         this.session = null;
+        if (this.onCallStateChange) this.onCallStateChange('ended', null);
       });
 
       session.on('failed', (data) => {
+        if (this.session !== session) return;
         const msg = data?.message;
         const sip = msg && typeof msg === 'object' ? msg.status_code : undefined;
         const phrase = msg && typeof msg === 'object' ? msg.reason_phrase : undefined;
         console.warn('[SIP] Call failed:', data?.cause ?? data, sip ? `SIP ${sip} ${phrase || ''}` : '');
-        if (this.onCallStateChange) this.onCallStateChange('failed', null);
         this.session = null;
+        if (this.onCallStateChange) this.onCallStateChange('failed', null);
       });
 
       // Attach remote audio stream automatically
@@ -161,6 +166,7 @@ class WebRTCService {
 
   /* ── Outgoing call ──────────────────────────────────────── */
   call(extension) {
+    if (this.session) throw new Error('Уже есть активный вызов');
     if (!this.ua) {
       throw new Error('Нет подключения к АТС');
     }

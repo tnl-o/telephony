@@ -23,8 +23,6 @@ services:
     build:
       context: ./freeswitch
       dockerfile: Dockerfile
-      args:
-        LAN_PUBLISH_IP: ${LAN_PUBLISH_IP:-192.168.0.18}
     container_name: freeswitch
     hostname: freeswitch
     networks:
@@ -36,13 +34,18 @@ services:
       - ./config/ssl:/etc/nginx_ssl:ro
       - ./data/freeswitch:/usr/local/freeswitch/db
       - ./logs/freeswitch:/usr/local/freeswitch/log
-      - freeswitch_directory:/etc/freeswitch/directory/default
+      - type: volume
+        source: freeswitch_directory
+        target: /etc/freeswitch/directory/default
+        volume:
+          nocopy: true
     ports:
       - "5060:5060/udp"   # SIP
       - "7443:7443/tcp"   # WSS (прямое подключение браузеров, минуя nginx)
       - "16384-16448:16384-16448/udp" # RTP
     environment:
       LAN_PUBLISH_IP: ${LAN_PUBLISH_IP:-192.168.0.18}
+      FREESWITCH_SIP_DOMAIN: ${SIP_DOMAIN:-100.64.1.10}
     restart: unless-stopped
     depends_on:
       - backend
@@ -80,12 +83,17 @@ services:
       - ./data/users.json:/app/data/users.json
       - ./config/ldap.json:/app/config/ldap.json:ro
       - ./logs/backend:/app/logs
-      - freeswitch_directory:/etc/freeswitch/directory/default
+      - type: volume
+        source: freeswitch_directory
+        target: /etc/freeswitch/directory/default
+        volume:
+          nocopy: true
     environment:
       - NODE_ENV=production
       - AUTH_MODE=name
       - LAN_PUBLISH_IP=${LAN_PUBLISH_IP:-192.168.0.18}
       - FREESWITCH_HOST=100.64.1.10
+      - FREESWITCH_SIP_DOMAIN=${SIP_DOMAIN:-100.64.1.10}
       - FREESWITCH_WSS_PORT=7443
       - FREESWITCH_DIR_PATH=/etc/freeswitch/directory/default
       - FREESWITCH_ESL_PORT=8021

@@ -29,6 +29,7 @@ const config = {
   },
   usersDbPath: process.env.USERS_DB_PATH || '/app/data/users.json',
   freeswitchDirPath: process.env.FREESWITCH_DIR_PATH || '/etc/freeswitch/directory/default',
+  sipDomain: process.env.FREESWITCH_SIP_DOMAIN || process.env.FREESWITCH_HOST || '100.64.1.10',
   freeswitchEsl: {
     host: process.env.FREESWITCH_HOST || '100.64.0.10',
     port: parseInt(process.env.FREESWITCH_ESL_PORT || '8021', 10),
@@ -71,26 +72,18 @@ wss.on('connection', (ws) => {
 
 /**
  * Build the SIP WebSocket URL for the client.
- * Прямое подключение браузеров к FreeSWITCH WSS :7443 (минуя nginx).
- * В fs_path попадает реальный IP:порт браузера — FS доставляет INVITE через тот же сокет.
+ * Direct WSS keeps REGISTER and incoming INVITE on the same browser socket.
+ * The hostname must match the shared HTTPS/WSS certificate, including in dev.
  */
 function buildSipWssUrl(req) {
   if (process.env.SIP_WSS_URL) return process.env.SIP_WSS_URL;
 
-  const lanIp = process.env.LAN_PUBLISH_IP || '192.168.0.18';
-  return `wss://${lanIp}:7443`;
-}
-
-function publicHostFromRequest(req) {
-  const forwarded = req.get('x-forwarded-host');
-  if (forwarded) {
-    return forwarded.split(':')[0].trim();
-  }
-  const host = req.get('host');
-  if (host) {
-    return host.split(':')[0].trim();
-  }
-  return process.env.WSS_PUBLIC_HOST || process.env.PUBLIC_HOST || 'localhost';
+  const authority = process.env.WSS_PUBLIC_HOST || req.get('host') ||
+    process.env.LAN_PUBLISH_IP || process.env.PUBLIC_HOST || 'localhost';
+  const url = new URL(`https://${authority}`);
+  url.protocol = 'wss:';
+  url.port = '7443';
+  return url.origin;
 }
 
 // Broadcast status update to all connected clients
@@ -111,33 +104,57 @@ function broadcastStatusUpdate(userData) {
  * Send 'reloadxml' to FreeSWITCH via ESL so it picks up new directory users.
  * Retries with backoff if FS is not ready yet.
  */
-async function reloadFreeSwitchXml(maxRetries = 10) {
+async function reloadFreeSwitchXml(maxRetries = 10, timeoutMs = 3000) {
   const { host, port, password } = config.freeswitchEsl;
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       await new Promise((resolve, reject) => {
         const socket = net.createConnection({ host, port });
-        const timeout = setTimeout(() => reject(new Error('ESL connect timeout')), 3000);
-
-        socket.on('connect', () => {
+        let settled = false;
+        const finish = (err) => {
+          if (settled) return;
+          settled = true;
           clearTimeout(timeout);
-          socket.write(`auth ${password}\n\n`);
-        });
-
-        let buffer = '';
+          socket.destroy();
+          if (err) reject(err);
+          else resolve();
+        };
+        const timeout = setTimeout(() => finish(new Error('ESL response timeout')), timeoutMs);
+        let buffer = Buffer.alloc(0);
+        let state = 'greeting';
         socket.on('data', (chunk) => {
-          buffer += chunk.toString();
-          if (buffer.includes('\n\n') || buffer.includes('Content-Type')) {
-            socket.write('api reloadxml\n\n');
-          }
-          if (buffer.includes('+OK') || (buffer.includes('Content-Length') && buffer.includes('\r\n\r\n'))) {
-            socket.end();
-            resolve();
+          buffer = Buffer.concat([buffer, chunk]);
+          while (!settled) {
+            const boundary = /\r?\n\r?\n/.exec(buffer.toString('utf8'));
+            if (!boundary) return;
+            const headerBytes = Buffer.byteLength(buffer.toString('utf8').slice(0, boundary.index));
+            const bodyStart = headerBytes + boundary[0].length;
+            const headers = Object.fromEntries(buffer.subarray(0, headerBytes).toString().split(/\r?\n/)
+              .map(line => { const colon = line.indexOf(':'); return [line.slice(0, colon).toLowerCase(), line.slice(colon + 1).trim()]; }));
+            const length = Number(headers['content-length'] || 0);
+            if (!Number.isSafeInteger(length) || length < 0 || length > 1024 * 1024) {
+              return finish(new Error('Invalid ESL content length'));
+            }
+            if (buffer.length < bodyStart + length) return;
+            const body = buffer.subarray(bodyStart, bodyStart + length).toString();
+            buffer = buffer.subarray(bodyStart + length);
+            if (state === 'greeting' && headers['content-type'] === 'auth/request') {
+              state = 'auth';
+              socket.write(`auth ${password}\n\n`);
+            } else if (state === 'auth' && headers['content-type'] === 'command/reply') {
+              if (!headers['reply-text']?.startsWith('+OK')) return finish(new Error('ESL authentication failed'));
+              state = 'reload';
+              socket.write('api reloadxml\n\n');
+            } else if (state === 'reload' && headers['content-type'] === 'api/response') {
+              return finish(body.trim().startsWith('+OK') ? null : new Error(`FreeSWITCH reloadxml failed: ${body.trim()}`));
+            } else if (headers['content-type'] === 'text/disconnect-notice') {
+              return finish(new Error('FreeSWITCH disconnected before reloadxml completed'));
+            }
           }
         });
-
-        socket.on('error', reject);
+        socket.on('error', finish);
+        socket.on('close', () => finish(new Error('ESL connection closed before reloadxml completed')));
       });
 
       console.log('FreeSWITCH reloadxml sent OK');
@@ -148,7 +165,7 @@ async function reloadFreeSwitchXml(maxRetries = 10) {
         console.log(`FreeSWITCH ESL reloadxml retry ${attempt}/${maxRetries} (${err.message}) — waiting ${delay}ms`);
         await new Promise(r => setTimeout(r, delay));
       } else {
-        console.error(`FreeSWITCH ESL reloadxml failed after ${maxRetries} attempts: ${err.message}`);
+        throw err;
       }
     }
   }
@@ -160,8 +177,8 @@ async function initialize() {
     await userService.load();
     // Generate FreeSWITCH directory XML from current users
     await userService.generateFreeSwitchDirectory(config.freeswitchDirPath);
-    // Tell FreeSWITCH to reload directory
-    await reloadFreeSwitchXml();
+    // FS starts after backend in compose; awaiting ESL here prevents startup.
+    // The startup reload runs after HTTP starts; logins await their own reload.
     if (authMode === 'name') {
       console.log('Auth: name-based (ФИО), no password required, LDAP skipped');
     } else if (authMode === 'simple') {
@@ -221,13 +238,15 @@ app.post('/api/auth/login', async (req, res) => {
     if (!user) {
       // Create new user with auto-assigned extension
       user = await userService.createUser(ldapUser);
-      // Regenerate FreeSWITCH directory and tell FS to reload
-      await userService.generateFreeSwitchDirectory(config.freeswitchDirPath);
-      await reloadFreeSwitchXml();
     } else {
       // Update user info from LDAP
       user = await userService.updateUserInfo(ldapUser.username, ldapUser);
     }
+
+    // Retry directory synchronization even when an earlier login created the
+    // user but could not reload FS. Never return credentials before the ACK.
+    await userService.generateFreeSwitchDirectory(config.freeswitchDirPath);
+    await reloadFreeSwitchXml();
 
     // Set user as online
     user = await userService.setOnlineStatus(user.username, true);
@@ -258,7 +277,7 @@ app.post('/api/auth/login', async (req, res) => {
         extension: user.extension.toString(),
         password: user.sipPassword,
         wssUrl: buildSipWssUrl(req),
-        domain: config.freeswitchEsl.host
+        domain: config.sipDomain
       }
     });
 
@@ -351,11 +370,15 @@ app.post('/api/admin/user/:username/extension', async (req, res) => {
     const { username } = req.params;
     const { extension } = req.body;
 
-    if (!extension || extension < 1000 || extension > 5999) {
+    const number = typeof extension === 'string' && /^\d{4}$/.test(extension)
+      ? Number(extension) : extension;
+    if (!Number.isInteger(number) || number < 1000 || number > 5999) {
       return res.status(400).json({ error: 'Extension must be between 1000 and 5999' });
     }
 
-    const user = await userService.updateUserExtension(username, parseInt(extension));
+    const user = await userService.updateUserExtension(username, number);
+    await userService.generateFreeSwitchDirectory(config.freeswitchDirPath);
+    await reloadFreeSwitchXml();
     
     res.json({ 
       success: true, 
@@ -398,6 +421,7 @@ async function start() {
     console.log(`Backend server running on port ${config.port}`);
     console.log(`WebSocket status endpoint: ws://localhost:${config.port}/ws/status`);
   });
+  reloadFreeSwitchXml().catch(err => console.error('Startup directory reload failed:', err.message));
 }
 
 // Graceful shutdown

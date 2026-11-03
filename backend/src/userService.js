@@ -1,11 +1,19 @@
 const fs = require('fs').promises;
 const path = require('path');
+const { randomUUID } = require('crypto');
+
+function xmlAttribute(value) {
+  return String(value ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '');
+}
 
 class UserService {
   constructor(dbPath) {
     this.dbPath = dbPath;
     this.users = [];
     this.usedNumbers = new Set();
+    this.directoryWrites = Promise.resolve();
   }
 
   async load() {
@@ -100,6 +108,9 @@ class UserService {
   }
 
   async updateUserExtension(username, newExtension) {
+    if (!Number.isInteger(newExtension) || newExtension < 1000 || newExtension > 5999) {
+      throw new Error('Extension must be an integer between 1000 and 5999');
+    }
     const user = this.findByUsername(username);
     if (!user) {
       throw new Error('User not found');
@@ -174,17 +185,27 @@ class UserService {
    * Writes to <directoryPath>/users.xml (directoryPath should be the FreeSWITCH directory folder).
    * @param {string} directoryPath — path to FreeSWITCH directory folder (e.g. /etc/freeswitch/directory/default)
    */
-  async generateFreeSwitchDirectory(directoryPath) {
+  generateFreeSwitchDirectory(directoryPath) {
+    const write = this.directoryWrites.then(() => this.writeFreeSwitchDirectory(directoryPath));
+    // A failed write must reach its caller without blocking later recovery.
+    this.directoryWrites = write.catch(() => {});
+    return write;
+  }
+
+  async writeFreeSwitchDirectory(directoryPath) {
     try {
       await fs.mkdir(directoryPath, { recursive: true });
 
       // Build XML for each user
       const xmlEntries = this.users.map((u) => {
-        const name = (u.displayName || u.username || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        if (!Number.isInteger(u.extension) || u.extension < 1000 || u.extension > 5999) {
+          throw new Error(`Invalid SIP extension for ${u.username}`);
+        }
+        const name = xmlAttribute(u.displayName || u.username);
         return `  <user id="${u.extension}">
     <params>
-      <param name="password" value="${u.sipPassword}"/>
-      <param name="vm-password" value="${u.sipPassword}"/>
+      <param name="password" value="${xmlAttribute(u.sipPassword)}"/>
+      <param name="vm-password" value="${xmlAttribute(u.sipPassword)}"/>
     </params>
     <variables>
       <variable name="user_context" value="default"/>
@@ -203,10 +224,19 @@ ${xmlEntries.join('\n')}
 `;
 
       const outputPath = path.join(directoryPath, 'users.xml');
-      await fs.writeFile(outputPath, content, 'utf-8');
+      // A reload must see the previous complete file or the new complete file.
+      // Keep temporary files outside the *.xml include pattern.
+      const temporaryPath = `${outputPath}.${randomUUID()}.tmp`;
+      try {
+        await fs.writeFile(temporaryPath, content, { encoding: 'utf-8', mode: 0o644 });
+        await fs.rename(temporaryPath, outputPath);
+      } finally {
+        await fs.rm(temporaryPath, { force: true });
+      }
       console.log(`FreeSWITCH directory generated: ${outputPath} (${this.users.length} users)`);
     } catch (err) {
       console.error('Failed to generate FreeSWITCH directory:', err.message);
+      throw err;
     }
   }
 }

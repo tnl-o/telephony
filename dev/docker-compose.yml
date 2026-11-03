@@ -9,15 +9,18 @@ services:
     container_name: dev-freeswitch
     hostname: freeswitch
     environment:
-      PUBLIC_HOST: ${PUBLIC_HOST:-}
-    entrypoint: ["/bin/sh", "/init-public-host.sh"]
+      LAN_PUBLISH_IP: ${PUBLIC_HOST:-192.168.0.11}
+      FREESWITCH_SIP_DOMAIN: ${SIP_DOMAIN:-100.64.0.10}
     networks:
       telephony_dev:
         ipv4_address: 100.64.0.10
     volumes:
-      - ./freeswitch/init-public-host.sh:/init-public-host.sh:ro
-      - ./freeswitch/directory/default.xml:/etc/freeswitch/directory/default.xml:ro
-      - ./freeswitch/directory/local-extensions.xml:/etc/freeswitch/directory/local-extensions.xml:ro
+      - ./ssl:/etc/nginx_ssl:ro
+      - type: volume
+        source: freeswitch_directory
+        target: /etc/freeswitch/directory/default
+        volume:
+          nocopy: true
       - ./freeswitch/dialplan/default.xml:/etc/freeswitch/dialplan/default.xml:ro
     ports:
       - "7443:7443/tcp"
@@ -32,11 +35,20 @@ services:
     hostname: backend
     env_file:
       - .env
+    environment:
+      FREESWITCH_HOST: freeswitch
+      FREESWITCH_SIP_DOMAIN: ${SIP_DOMAIN:-100.64.0.10}
+      FREESWITCH_DIR_PATH: /etc/freeswitch/directory/default
     networks:
       telephony_dev:
         ipv4_address: 100.64.0.20
     volumes:
       - ./data/users.json:/app/data/users.json
+      - type: volume
+        source: freeswitch_directory
+        target: /etc/freeswitch/directory/default
+        volume:
+          nocopy: true
     restart: unless-stopped
 
   frontend:
@@ -67,17 +79,28 @@ services:
     image: nginx:alpine
     container_name: dev-nginx
     hostname: nginx
+    environment:
+      PUBLIC_HOST: ${PUBLIC_HOST:-192.168.0.11}
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
         set -e
         if [ ! -s /etc/nginx/ssl/cert.pem ]; then
           apk add --no-cache openssl
+          CERT_HOST=$$(printf '%s' "$$PUBLIC_HOST" | tr -d '\r')
+          case "$$CERT_HOST" in
+            ''|*[!a-zA-Z0-9.:-]*) echo 'Invalid PUBLIC_HOST' >&2; exit 1 ;;
+          esac
+          case "$$CERT_HOST" in
+            *:*) PUBLIC_SAN="IP:$$CERT_HOST" ;;
+            *[!0-9.]*) PUBLIC_SAN="DNS:$$CERT_HOST" ;;
+            *) PUBLIC_SAN="IP:$$CERT_HOST" ;;
+          esac
           openssl req -x509 -nodes -days 825 -newkey rsa:2048 \
             -keyout /etc/nginx/ssl/key.pem \
             -out /etc/nginx/ssl/cert.pem \
             -subj "/CN=telephony-dev" \
-            -addext "subjectAltName=DNS:localhost,DNS:host.docker.internal,IP:127.0.0.1"
+            -addext "subjectAltName=DNS:localhost,DNS:host.docker.internal,IP:127.0.0.1,$$PUBLIC_SAN"
         fi
         exec nginx -g "daemon off;"
     networks:
@@ -100,3 +123,6 @@ networks:
       config:
         - subnet: 100.64.0.0/24
           gateway: 100.64.0.1
+
+volumes:
+  freeswitch_directory:

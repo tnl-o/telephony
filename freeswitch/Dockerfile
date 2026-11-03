@@ -1,15 +1,3 @@
-ARG LAN_PUBLISH_IP=192.168.0.18
-
-FROM alpine:3.19 AS tls
-ARG LAN_PUBLISH_IP
-RUN apk add --no-cache openssl
-RUN mkdir -p /out \
-  && openssl req -x509 -nodes -days 3650 -newkey rsa:2048 \
-    -keyout /out/wss_key.pem \
-    -out /out/wss_cert.pem \
-    -subj "/CN=${LAN_PUBLISH_IP}" \
-    -addext "subjectAltName=DNS:freeswitch,IP:${LAN_PUBLISH_IP},IP:127.0.0.1"
-
 FROM safarov/freeswitch:latest
 
 # Положить vanilla-конфиг в образ, чтобы entrypoint не затирал его при старте
@@ -41,14 +29,16 @@ COPY conf/dialplan/default.xml /etc/freeswitch/dialplan/default/00_telephony_int
 RUN mkdir -p /etc/freeswitch/directory/default
 COPY conf/directory/default.xml /etc/freeswitch/directory/default/default.xml
 
+# HTTPS and WSS certificate material is supplied by the shared runtime mount.
 RUN mkdir -p /etc/freeswitch/tls
-COPY --from=tls /out/wss_key.pem /etc/freeswitch/tls/wss_key.pem
-COPY --from=tls /out/wss_cert.pem /etc/freeswitch/tls/wss_cert.pem
-# FreeSWITCH WSS profile expects a combined .pem file (cert + key)
-RUN cat /etc/freeswitch/tls/wss_cert.pem /etc/freeswitch/tls/wss_key.pem > /etc/freeswitch/tls/wss.pem
-RUN chmod 600 /etc/freeswitch/tls/wss_key.pem /etc/freeswitch/tls/wss.pem && chmod 644 /etc/freeswitch/tls/wss_cert.pem
 
-RUN mv /docker-entrypoint.sh /docker-entrypoint-vanilla.sh
+# safarov images use /entrypoint.sh; retain compatibility with images using
+# the older name without overwriting the upstream startup script.
+RUN if [ -f /entrypoint.sh ]; then \
+      mv /entrypoint.sh /docker-entrypoint-vanilla.sh; \
+    elif [ -f /docker-entrypoint.sh ]; then \
+      mv /docker-entrypoint.sh /docker-entrypoint-vanilla.sh; \
+    else echo 'FreeSWITCH base entrypoint not found' >&2; exit 1; fi
 COPY docker-entrypoint.sh /docker-entrypoint.sh
 RUN sed -i 's/\r$//' /docker-entrypoint.sh && chmod +x /docker-entrypoint.sh /docker-entrypoint-vanilla.sh
 

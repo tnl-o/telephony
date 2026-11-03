@@ -3,6 +3,7 @@ import { authAPI } from '../services/auth';
 
 function Login({ onLoginSuccess }) {
   const [fullName, setFullName] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError]       = useState('');
   const [loading, setLoading]   = useState(false);
 
@@ -13,7 +14,7 @@ function Login({ onLoginSuccess }) {
     if (!name) { setError('Введите ФИО'); return; }
     setLoading(true);
     try {
-      const result = await authAPI.login(name, '');
+      const result = await authAPI.login(name, password);
       onLoginSuccess({
         ...result.user,
         sipPassword: result.sipCredentials?.password,
@@ -52,7 +53,7 @@ function Login({ onLoginSuccess }) {
         {/* Header */}
         <div className="connect-header">
           <h1 className="connect-title">Корпоративная телефония</h1>
-          <p className="connect-subtitle">Введите ваше ФИО для входа</p>
+          <p className="connect-subtitle">Введите ФИО или логин вашей учётной записи</p>
         </div>
 
         {/* Form */}
@@ -60,13 +61,14 @@ function Login({ onLoginSuccess }) {
 
           {/* Full name */}
           <div className="form-group">
-            <label className="form-label">ФИО</label>
+            <label className="form-label" htmlFor="login-name">ФИО или логин</label>
             <div className="input-wrapper input-icon-left">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="input-icon">
                 <path strokeLinecap="round" strokeLinejoin="round"
                   d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
               </svg>
               <input
+                id="login-name"
                 type="text"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
@@ -77,6 +79,13 @@ function Login({ onLoginSuccess }) {
                 disabled={loading}
               />
             </div>
+          </div>
+
+          <div className="form-group">
+            <label className="form-label" htmlFor="login-password">Пароль, если требуется для входа</label>
+            <input id="login-password" type="password" value={password}
+              onChange={(e) => setPassword(e.target.value)} className="form-input"
+              autoComplete="current-password" disabled={loading} />
           </div>
 
           {/* Error */}

@@ -1,0 +1,11 @@
+{
+  "name": "telephony-validation",
+  "private": true,
+  "scripts": {
+    "test": "node --test",
+    "test:coverage": "node --test --experimental-test-coverage"
+  },
+  "devDependencies": {
+    "yaml": "^2.9.1"
+  }
+}

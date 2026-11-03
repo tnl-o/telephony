@@ -45,24 +45,14 @@ function Dashboard({ user, onLogout }) {
 
   const { onlineUsers, isConnected } = useWebSocket();
 
-  /* ── Init ─────────────────────────────────────────────────
-     SIP только здесь: cleanup НЕ вызывает disconnect — иначе React Strict Mode
-     снимает UA сразу после входа, INVITE до FreeSWITCH не уходит (в логе только REGISTER). */
+  /* SIP callbacks and connection are installed together. connect() replaces
+     the previous UA when React re-runs this effect in development. */
   useEffect(() => {
     loadContacts();
 
-    let base = user;
-    try {
-      const raw = localStorage.getItem('user');
-      if (raw) {
-        const stored = JSON.parse(raw);
-        if (stored?.username === user.username) {
-          base = { ...user, ...stored };
-        }
-      }
-    } catch (_) {
-      /* ignore */
-    }
+    // Login/sessionStorage is authoritative; legacy localStorage can contain
+    // an obsolete extension, SIP password or WSS endpoint.
+    const base = user;
 
     const sipUser = {
       ...base,
@@ -90,6 +80,7 @@ function Dashboard({ user, onLogout }) {
 
     webrtcService.setOnCallStateChange((state, session) => {
       if (state === 'active') {
+        clearInterval(durationRef.current);
         setCallState('active');
         setActiveCall(session);
         setIsMuted(false);
@@ -141,7 +132,9 @@ function Dashboard({ user, onLogout }) {
   };
 
   const handleDialCall = () => {
-    if (dialNumber) handleCall(dialNumber);
+    if (!dialNumber) return;
+    if (callState === 'active') webrtcService.sendDTMF(dialNumber);
+    else if (callState === 'idle') handleCall(dialNumber);
   };
 
   const handleAnswer = () => webrtcService.answer();
